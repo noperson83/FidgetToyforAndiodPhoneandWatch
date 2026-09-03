@@ -1522,26 +1522,19 @@ internal fun FidgetToyPage(
                                     context.openFidgetSpinnerWallpaper()
                                 },
                                 motionGesturesEnabled = motionGesturesEnabled,
-                                gestureControlMode = gestureControlMode,
                                 phoneMotionEnabled = phoneMotionEnabled,
                                 tiltGestureEnabled = tiltGestureEnabled,
                                 shakeGestureEnabled = shakeGestureEnabled,
                                 motionSensitivity = motionSensitivity,
                                 motionSensorsAvailable = motionSnapshot.sensorsAvailable,
-                                onMotionGesturesToggle = {
-                                    motionGesturesEnabled = !motionGesturesEnabled
-                                    if (motionGesturesEnabled && gestureControlMode == FidgetControlMode.Touch) {
-                                        gestureControlMode = FidgetControlMode.Both
+                                onMotionGesturesEnabledChange = { enabled ->
+                                    motionGesturesEnabled = enabled
+                                    gestureControlMode = if (enabled) {
+                                        FidgetControlMode.Both
+                                    } else {
+                                        FidgetControlMode.Touch
                                     }
-                                    triggerFeedback(countFidget = false)
-                                },
-                                onGestureControlModeChoice = { mode ->
-                                    gestureControlMode = mode
-                                    motionGesturesEnabled = mode != FidgetControlMode.Touch
-                                    triggerFeedback(countFidget = false)
-                                },
-                                onPhoneMotionToggle = {
-                                    phoneMotionEnabled = !phoneMotionEnabled
+                                    if (phoneEdition) phoneMotionEnabled = enabled
                                     triggerFeedback(countFidget = false)
                                 },
                                 onTiltGestureToggle = {
@@ -2609,15 +2602,12 @@ private fun FidgetMenuPage(
     onAddDockClick: () -> Unit,
     onSpinnerWallpaperClick: () -> Unit,
     motionGesturesEnabled: Boolean,
-    gestureControlMode: FidgetControlMode,
     phoneMotionEnabled: Boolean,
     tiltGestureEnabled: Boolean,
     shakeGestureEnabled: Boolean,
     motionSensitivity: FidgetMotionSensitivity,
     motionSensorsAvailable: Boolean,
-    onMotionGesturesToggle: () -> Unit,
-    onGestureControlModeChoice: (FidgetControlMode) -> Unit,
-    onPhoneMotionToggle: () -> Unit,
+    onMotionGesturesEnabledChange: (Boolean) -> Unit,
     onTiltGestureToggle: () -> Unit,
     onShakeGestureToggle: () -> Unit,
     onMotionSensitivityChoice: (FidgetMotionSensitivity) -> Unit,
@@ -2642,6 +2632,8 @@ private fun FidgetMenuPage(
     val settingsScrollState = rememberScrollState()
     val accentColor = colorFromChoice(mainColorArgb)
     var gestureSectionExpanded by rememberSaveable { mutableStateOf(false) }
+    val motionControlsActive = motionGesturesEnabled &&
+        (!phoneSurfacesEnabled || phoneMotionEnabled)
 
     LaunchedEffect(Unit) {
         settingsScrollState.scrollTo(0)
@@ -2819,10 +2811,9 @@ private fun FidgetMenuPage(
                 Spacer(modifier = Modifier.height(sectionSpacing))
             }
 
-            FidgetMenuSectionTitle(text.gestures, labelFontSize, accentColor)
             FidgetSettingsButton(
-                text = text.gestures,
-                selected = gestureSectionExpanded,
+                text = "${text.gestures}: ${if (motionControlsActive) text.on else text.off}",
+                selected = motionControlsActive,
                 accentColor = accentColor,
                 accentColorArgb = mainColorArgb,
                 phoneLayout = phoneLayout,
@@ -2835,136 +2826,100 @@ private fun FidgetMenuPage(
                     accentColor,
                     modifier = Modifier.padding(top = tightSpacing),
                 )
-                FidgetSettingsButton(
-                    text = if (motionGesturesEnabled) text.on else text.off,
-                    selected = motionGesturesEnabled,
-                    accentColor = accentColor,
-                    accentColorArgb = mainColorArgb,
-                    phoneLayout = phoneLayout,
-                    onClick = onMotionGesturesToggle,
-                )
-
-                FidgetMenuSectionTitle(
-                    text.controlMode,
-                    labelFontSize,
-                    accentColor,
-                    modifier = Modifier.padding(top = tightSpacing),
-                )
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterHorizontally),
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(top = tightSpacing),
                 ) {
                     FidgetSettingsButton(
-                        text = text.touchControl,
-                        selected = gestureControlMode == FidgetControlMode.Touch,
+                        text = text.off,
+                        selected = !motionControlsActive,
                         accentColor = accentColor,
                         accentColorArgb = mainColorArgb,
                         phoneLayout = phoneLayout,
-                        onClick = { onGestureControlModeChoice(FidgetControlMode.Touch) },
+                        onClick = { onMotionGesturesEnabledChange(false) },
                     )
                     FidgetSettingsButton(
-                        text = text.motionControl,
-                        selected = gestureControlMode == FidgetControlMode.Motion,
+                        text = text.on,
+                        selected = motionControlsActive,
                         accentColor = accentColor,
                         accentColorArgb = mainColorArgb,
                         phoneLayout = phoneLayout,
-                        onClick = { onGestureControlModeChoice(FidgetControlMode.Motion) },
-                    )
-                    FidgetSettingsButton(
-                        text = text.bothControl,
-                        selected = gestureControlMode == FidgetControlMode.Both,
-                        accentColor = accentColor,
-                        accentColorArgb = mainColorArgb,
-                        phoneLayout = phoneLayout,
-                        onClick = { onGestureControlModeChoice(FidgetControlMode.Both) },
+                        onClick = { onMotionGesturesEnabledChange(true) },
                     )
                 }
 
-                if (phoneSurfacesEnabled) {
+                if (motionControlsActive) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterHorizontally),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = tightSpacing),
+                    ) {
+                        FidgetSettingsButton(
+                            text = text.tilt,
+                            selected = tiltGestureEnabled,
+                            accentColor = accentColor,
+                            accentColorArgb = mainColorArgb,
+                            phoneLayout = phoneLayout,
+                            onClick = onTiltGestureToggle,
+                        )
+                        FidgetSettingsButton(
+                            text = text.shake,
+                            selected = shakeGestureEnabled,
+                            accentColor = accentColor,
+                            accentColorArgb = mainColorArgb,
+                            phoneLayout = phoneLayout,
+                            onClick = onShakeGestureToggle,
+                        )
+                    }
+
                     FidgetMenuSectionTitle(
-                        text.phoneMotion,
+                        text.sensitivity,
                         labelFontSize,
                         accentColor,
                         modifier = Modifier.padding(top = tightSpacing),
                     )
-                    FidgetSettingsButton(
-                        text = if (phoneMotionEnabled) text.on else text.off,
-                        selected = phoneMotionEnabled,
-                        accentColor = accentColor,
-                        accentColorArgb = mainColorArgb,
-                        phoneLayout = true,
-                        onClick = onPhoneMotionToggle,
-                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterHorizontally),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = tightSpacing),
+                    ) {
+                        FidgetSettingsButton(
+                            text = text.low,
+                            selected = motionSensitivity == FidgetMotionSensitivity.Low,
+                            accentColor = accentColor,
+                            accentColorArgb = mainColorArgb,
+                            phoneLayout = phoneLayout,
+                            onClick = { onMotionSensitivityChoice(FidgetMotionSensitivity.Low) },
+                        )
+                        FidgetSettingsButton(
+                            text = text.medium,
+                            selected = motionSensitivity == FidgetMotionSensitivity.Medium,
+                            accentColor = accentColor,
+                            accentColorArgb = mainColorArgb,
+                            phoneLayout = phoneLayout,
+                            onClick = { onMotionSensitivityChoice(FidgetMotionSensitivity.Medium) },
+                        )
+                        FidgetSettingsButton(
+                            text = text.high,
+                            selected = motionSensitivity == FidgetMotionSensitivity.High,
+                            accentColor = accentColor,
+                            accentColorArgb = mainColorArgb,
+                            phoneLayout = phoneLayout,
+                            onClick = { onMotionSensitivityChoice(FidgetMotionSensitivity.High) },
+                        )
+                    }
+                    if (motionSensorsAvailable) {
+                        FidgetSettingsButton(
+                            text = text.calibrateTilt,
+                            selected = false,
+                            accentColor = accentColor,
+                            accentColorArgb = mainColorArgb,
+                            phoneLayout = phoneLayout,
+                            onClick = onCalibrateTilt,
+                        )
+                    }
                 }
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterHorizontally),
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(top = tightSpacing),
-                ) {
-                    FidgetSettingsButton(
-                        text = text.tilt,
-                        selected = tiltGestureEnabled,
-                        accentColor = accentColor,
-                        accentColorArgb = mainColorArgb,
-                        phoneLayout = phoneLayout,
-                        onClick = onTiltGestureToggle,
-                    )
-                    FidgetSettingsButton(
-                        text = text.shake,
-                        selected = shakeGestureEnabled,
-                        accentColor = accentColor,
-                        accentColorArgb = mainColorArgb,
-                        phoneLayout = phoneLayout,
-                        onClick = onShakeGestureToggle,
-                    )
-                }
-
-                FidgetMenuSectionTitle(
-                    text.sensitivity,
-                    labelFontSize,
-                    accentColor,
-                    modifier = Modifier.padding(top = tightSpacing),
-                )
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterHorizontally),
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(top = tightSpacing),
-                ) {
-                    FidgetSettingsButton(
-                        text = text.low,
-                        selected = motionSensitivity == FidgetMotionSensitivity.Low,
-                        accentColor = accentColor,
-                        accentColorArgb = mainColorArgb,
-                        phoneLayout = phoneLayout,
-                        onClick = { onMotionSensitivityChoice(FidgetMotionSensitivity.Low) },
-                    )
-                    FidgetSettingsButton(
-                        text = text.medium,
-                        selected = motionSensitivity == FidgetMotionSensitivity.Medium,
-                        accentColor = accentColor,
-                        accentColorArgb = mainColorArgb,
-                        phoneLayout = phoneLayout,
-                        onClick = { onMotionSensitivityChoice(FidgetMotionSensitivity.Medium) },
-                    )
-                    FidgetSettingsButton(
-                        text = text.high,
-                        selected = motionSensitivity == FidgetMotionSensitivity.High,
-                        accentColor = accentColor,
-                        accentColorArgb = mainColorArgb,
-                        phoneLayout = phoneLayout,
-                        onClick = { onMotionSensitivityChoice(FidgetMotionSensitivity.High) },
-                    )
-                }
-                FidgetSettingsButton(
-                    text = text.calibrateTilt,
-                    selected = motionSensorsAvailable,
-                    accentColor = accentColor,
-                    accentColorArgb = mainColorArgb,
-                    phoneLayout = phoneLayout,
-                    onClick = onCalibrateTilt,
-                )
             }
 
             Spacer(modifier = Modifier.height(sectionSpacing))

@@ -9,6 +9,7 @@
     <application>
         <activity
             android:name=".presentation.MainActivity"
+            android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize"
             android:exported="false"
             android:taskAffinity="${applicationId}"
             tools:replace="android:exported,android:taskAffinity">

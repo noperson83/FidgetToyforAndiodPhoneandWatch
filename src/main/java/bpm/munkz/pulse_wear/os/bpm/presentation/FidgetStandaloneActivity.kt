@@ -42,7 +42,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         configurePhoneWindow()
         refreshFidgetPhoneSurfaces()
-        applyFidgetToyRequest(intent)
+        if (savedInstanceState == null) {
+            applyFidgetToyRequest(intent)
+        }
         setContent {
             FidgetApp(
                 requestedToyIndex = requestedFidgetToyIndex,
