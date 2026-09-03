@@ -4,6 +4,57 @@ Standalone Android project for the Munkz Fidget Toy phone and Wear OS apps.
 Both variants use the existing Google Play application ID so phone and watch
 updates remain compatible with installed releases.
 
+## Store listing
+
+### Short description
+
+Spin, tap, tilt, pop, and play with satisfying fidgets on phone and watch.
+
+### Full description
+
+Munkz Fidget Toy turns your phone and Wear OS watch into a pocket-sized
+playground for curious hands.
+
+Flick a responsive spinner, tilt through shifting mazes, pop colorful buttons,
+build beats, and explore a growing collection of playful interactive toys.
+Every fidget has its own movement, personality, and satisfying response.
+
+#### The toy collection
+
+- **Spin Storm:** Flick, drag, reverse, or hold a customizable spinner built to carry real momentum.
+- **Flip Stack:** A bank of eight crisp switches waiting for the perfect on-and-off pattern.
+- **Grid Stepper:** Nudge a glowing button through a compact grid, one satisfying step at a time.
+- **Button Drift:** Slide four colorful buttons freely and arrange the board exactly your way.
+- **Color Pop Hunt:** Catch bright targets as they jump to fresh positions.
+- **Bounce Shot:** Pull in any direction, release, and ricochet around the walls at a speed set by your draw.
+- **Maze Shuffle:** Navigate a newly generated maze with changing start and finish points.
+- **Squish Pop:** Press, pull, and stretch a soft shape that leans into every touch.
+- **Mag Snap:** Slide between magnetic stops and feel every clean snap into place.
+- **Pop Grid:** Press through a field of bubbles, complete the grid, then reset and pop again.
+- **Infinity Flip:** Cycle folding color panels through an endlessly shifting sequence.
+- **Ratchet Ring:** Turn the ring notch by notch for crisp mechanical clicks.
+- **Liquid Maze:** Guide a flowing blob around resistant walls and leave a shimmering trail.
+- **Gear Jam:** Turn a meshed gear train, build momentum, and remix the gear sizes.
+- **Worry Stone:** Rub a smooth digital stone and polish its surface with every pass.
+- **Key Clicks:** Tap a compact set of tactile keys and build your own click pattern.
+- **Zen Trace:** Draw a luminous trail that lingers, flows, and fades behind your fingertip.
+- **Beat Machine:** Trigger kick, snare, hats, tom, clap, and bell with light, sound, and rumble.
+- **Window Slide:** Open the glass and switch a tiny landscape between sunlight and moonlight.
+- **Door Swing:** Tap a hinged door and watch it fold through a dimensional open-and-close motion.
+- **Light Flick:** Flip the switch and fill the toy with a warm electric glow.
+- **Fan Breeze:** Start the fan and watch three streamers dance in the airflow.
+- **Sink Flow:** Turn the hot and cold knobs and mix colorful animated water.
+- **Symbol Dock:** Tap four chunky pads to cycle through a playful deck of symbols.
+- **Center Drop:** Guide a silver ball through circular gates toward the center hole.
+- **Ball Sort:** Steer three colored balls through obstacles and settle each into its matching pocket.
+
+Make the experience yours with customizable themes, spinner designs, colors,
+sound, screen flashes, and vibration feedback. Pin one favorite toy, collect tap
+rewards, keep phone and watch preferences in step, place the Fidget Dock on
+your home screen, or bring an interactive spinner to your wallpaper.
+
+Spin it. Tap it. Tilt it. Make it yours.
+
 ## Variants
 
 - `fidgetphone`: Android phone app, minimum API 31
