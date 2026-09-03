@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wallpaper xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/fidget_spinner_wallpaper_description"
+    android:thumbnail="@drawable/munkz_fidget_toy_logo" />

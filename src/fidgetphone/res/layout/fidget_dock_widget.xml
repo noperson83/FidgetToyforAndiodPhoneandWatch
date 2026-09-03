@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/fidget_widget_shell"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="10dp">
+
+    <LinearLayout
+        android:id="@+id/fidget_dock_header"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:id="@+id/fidget_dock_logo"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:contentDescription="@string/fidget_dock_open"
+            android:scaleType="fitCenter"
+            android:src="@drawable/munkz_fidget_toy_logo" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/fidget_dock_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-black"
+                android:includeFontPadding="false"
+                android:letterSpacing="0"
+                android:text="@string/fidget_dock_title"
+                android:textColor="#56F1C8"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/fidget_dock_favorite"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:fontFamily="sans-serif-medium"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:text="@string/fidget_dock_default_favorite"
+                android:textColor="#FFC857"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/fidget_dock_count"
+            android:layout_width="wrap_content"
+            android:layout_height="28dp"
+            android:background="@drawable/fidget_widget_counter"
+            android:fontFamily="sans-serif-black"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:minWidth="66dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:text="@string/fidget_dock_count_zero"
+            android:textColor="#56F1C8"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="8dp"
+        android:layout_weight="1"
+        android:baselineAligned="false"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:weightSum="4">
+
+        <TextView
+            android:id="@+id/fidget_dock_pad_1"
+            style="@style/FidgetDockPad"
+            android:layout_marginEnd="3dp"
+            android:background="@drawable/fidget_widget_pad_gold"
+            android:contentDescription="@string/fidget_dock_pad_gold"
+            android:text="@string/fidget_dock_pad_default" />
+
+        <TextView
+            android:id="@+id/fidget_dock_pad_2"
+            style="@style/FidgetDockPad"
+            android:layout_marginStart="3dp"
+            android:layout_marginEnd="3dp"
+            android:background="@drawable/fidget_widget_pad_pink"
+            android:contentDescription="@string/fidget_dock_pad_pink"
+            android:text="@string/fidget_dock_pad_default" />
+
+        <TextView
+            android:id="@+id/fidget_dock_pad_3"
+            style="@style/FidgetDockPad"
+            android:layout_marginStart="3dp"
+            android:layout_marginEnd="3dp"
+            android:background="@drawable/fidget_widget_pad_teal"
+            android:contentDescription="@string/fidget_dock_pad_teal"
+            android:text="@string/fidget_dock_pad_default" />
+
+        <TextView
+            android:id="@+id/fidget_dock_pad_4"
+            style="@style/FidgetDockPad"
+            android:layout_marginStart="3dp"
+            android:background="@drawable/fidget_widget_pad_purple"
+            android:contentDescription="@string/fidget_dock_pad_purple"
+            android:text="@string/fidget_dock_pad_default" />
+    </LinearLayout>
+</LinearLayout>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fidget_dock_title">FIDGET DOCK</string>
+    <string name="fidget_dock_description">Four tactile symbol pads that cycle through ten choices, plus a shortcut to your favorite toy.</string>
+    <string name="fidget_dock_open">Open favorite fidget</string>
+    <string name="fidget_dock_default_favorite">Spin Storm</string>
+    <string name="fidget_dock_count">%1$s TAPS</string>
+    <string name="fidget_dock_count_zero">0 TAPS</string>
+    <string name="fidget_dock_pad_default" translatable="false">&#x25CF;</string>
+    <string name="fidget_dock_pad_gold">Gold fidget pad</string>
+    <string name="fidget_dock_pad_pink">Pink fidget pad</string>
+    <string name="fidget_dock_pad_teal">Teal fidget pad</string>
+    <string name="fidget_dock_pad_purple">Purple fidget pad</string>
+    <string name="fidget_dock_pad_symbol">Fidget pad %1$s</string>
+    <string name="fidget_spinner_wallpaper_name">Munkz Interactive Spinner</string>
+    <string name="fidget_spinner_wallpaper_description">Flick, drag, and hold an interactive spinner on your wallpaper.</string>
+</resources>

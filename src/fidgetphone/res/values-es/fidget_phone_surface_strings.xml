@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fidget_dock_title">DOCK FIDGET</string>
+    <string name="fidget_dock_description">Cuatro botones de símbolos con diez opciones y un acceso a tu juguete favorito.</string>
+    <string name="fidget_dock_open">Abrir fidget favorito</string>
+    <string name="fidget_dock_default_favorite">Tormenta Giratoria</string>
+    <string name="fidget_dock_count">%1$s TOQUES</string>
+    <string name="fidget_dock_count_zero">0 TOQUES</string>
+    <string name="fidget_dock_pad_gold">Botón dorado</string>
+    <string name="fidget_dock_pad_pink">Botón rosa</string>
+    <string name="fidget_dock_pad_teal">Botón turquesa</string>
+    <string name="fidget_dock_pad_purple">Botón morado</string>
+    <string name="fidget_dock_pad_symbol">Botón fidget %1$s</string>
+    <string name="fidget_spinner_wallpaper_name">Spinner Interactivo Munkz</string>
+    <string name="fidget_spinner_wallpaper_description">Desliza, gira y mantén pulsado el spinner del fondo.</string>
+</resources>

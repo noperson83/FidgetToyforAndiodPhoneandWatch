@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-feature
+        android:name="android.hardware.type.watch"
+        tools:node="remove" />
+
+    <application>
+        <activity
+            android:name=".presentation.MainActivity"
+            android:exported="false"
+            android:taskAffinity="${applicationId}"
+            tools:replace="android:exported,android:taskAffinity">
+            <intent-filter tools:node="removeAll" />
+        </activity>
+
+        <receiver
+            android:name=".presentation.FidgetDockWidgetProvider"
+            android:exported="false"
+            android:label="@string/fidget_dock_title">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="bpm.munkz.pulse_wear.os.fidgettoy.action.REFRESH_FIDGET_DOCK" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/fidget_dock_widget_info" />
+        </receiver>
+
+        <service
+            android:name=".presentation.FidgetSpinnerWallpaperService"
+            android:description="@string/fidget_spinner_wallpaper_description"
+            android:exported="true"
+            android:label="@string/fidget_spinner_wallpaper_name"
+            android:permission="android.permission.BIND_WALLPAPER">
+            <intent-filter>
+                <action android:name="android.service.wallpaper.WallpaperService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.wallpaper"
+                android:resource="@xml/fidget_spinner_wallpaper" />
+        </service>
+
+        <activity-alias
+            android:name=".presentation.launcher.FidgetLauncherSpinStorm"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@drawable/fidget_icon_spin_storm"
+            android:label="@string/app_name"
+            android:targetActivity=".presentation.MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".presentation.launcher.FidgetLauncherFlipStack"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/fidget_icon_flip_stack"
+            android:label="@string/app_name"
+            android:targetActivity=".presentation.MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".presentation.launcher.FidgetLauncherGridStepper"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/fidget_icon_grid_stepper"
+            android:label="@string/app_name"
+            android:targetActivity=".presentation.MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".presentation.launcher.FidgetLauncherButtonDrift"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/fidget_icon_button_drift"
+            android:label="@string/app_name"
+            android:targetActivity=".presentation.MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".presentation.launcher.FidgetLauncherColorPopHunt"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/fidget_icon_color_pop_hunt"
+            android:label="@string/app_name"
+            android:targetActivity=".presentation.MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".presentation.launcher.FidgetLauncherBounceShot"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/fidget_icon_bounce_shot"
+            android:label="@string/app_name"
+            android:targetActivity=".presentation.MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".presentation.launcher.FidgetLauncherMazeShuffle"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/fidget_icon_maze_shuffle"
+            android:label="@string/app_name"
+            android:targetActivity=".presentation.MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".presentation.launcher.FidgetLauncherSquishPop"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/fidget_icon_squish_pop"
+            android:label="@string/app_name"
+            android:targetActivity=".presentation.MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".presentation.launcher.FidgetLauncherMagSnap"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/fidget_icon_mag_snap"
+            android:label="@string/app_name"
+            android:targetActivity=".presentation.MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".presentation.launcher.FidgetLauncherPopGrid"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/fidget_icon_pop_grid"
+            android:label="@string/app_name"
+            android:targetActivity=".presentation.MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".presentation.launcher.FidgetLauncherInfinityFlip"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/fidget_icon_infinity_flip"
+            android:label="@string/app_name"
+            android:targetActivity=".presentation.MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".presentation.launcher.FidgetLauncherRatchetRing"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/fidget_icon_ratchet_ring"
+            android:label="@string/app_name"
+            android:targetActivity=".presentation.MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".presentation.launcher.FidgetLauncherLiquidMaze"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/fidget_icon_liquid_maze"
+            android:label="@string/app_name"
+            android:targetActivity=".presentation.MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".presentation.launcher.FidgetLauncherGearJam"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/fidget_icon_gear_jam"
+            android:label="@string/app_name"
+            android:targetActivity=".presentation.MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".presentation.launcher.FidgetLauncherWorryStone"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/fidget_icon_worry_stone"
+            android:label="@string/app_name"
+            android:targetActivity=".presentation.MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".presentation.launcher.FidgetLauncherKeyClicks"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/fidget_icon_key_clicks"
+            android:label="@string/app_name"
+            android:targetActivity=".presentation.MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".presentation.launcher.FidgetLauncherZenTrace"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/fidget_icon_zen_trace"
+            android:label="@string/app_name"
+            android:targetActivity=".presentation.MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".presentation.launcher.FidgetLauncherBeatMachine"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/fidget_icon_beat_machine"
+            android:label="@string/app_name"
+            android:targetActivity=".presentation.MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".presentation.launcher.FidgetLauncherWindowSlide"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/fidget_icon_window_slide"
+            android:label="@string/app_name"
+            android:targetActivity=".presentation.MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".presentation.launcher.FidgetLauncherDoorSwing"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/fidget_icon_door_swing"
+            android:label="@string/app_name"
+            android:targetActivity=".presentation.MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".presentation.launcher.FidgetLauncherLightFlick"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/fidget_icon_light_flick"
+            android:label="@string/app_name"
+            android:targetActivity=".presentation.MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".presentation.launcher.FidgetLauncherFanBreeze"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/fidget_icon_fan_breeze"
+            android:label="@string/app_name"
+            android:targetActivity=".presentation.MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".presentation.launcher.FidgetLauncherSinkFlow"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/fidget_icon_sink_flow"
+            android:label="@string/app_name"
+            android:targetActivity=".presentation.MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".presentation.launcher.FidgetLauncherSymbolDock"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/fidget_icon_symbol_dock"
+            android:label="@string/app_name"
+            android:targetActivity=".presentation.MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".presentation.launcher.FidgetLauncherCenterDrop"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/fidget_icon_ratchet_ring"
+            android:label="@string/app_name"
+            android:targetActivity=".presentation.MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".presentation.launcher.FidgetLauncherBallSort"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/fidget_icon_maze_shuffle"
+            android:label="@string/app_name"
+            android:targetActivity=".presentation.MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+
+        <uses-library
+            android:name="com.google.android.wearable"
+            tools:node="remove" />
+
+        <uses-library
+            android:name="wear-sdk"
+            tools:node="remove" />
+
+        <meta-data
+            android:name="com.google.android.wearable.standalone"
+            android:value="true"
+            tools:node="remove" />
+
+    </application>
+</manifest>
