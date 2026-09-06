@@ -52,7 +52,7 @@ android {
         create("fidgettoy") {
             dimension = "device"
             applicationId = "bpm.munkz.pulse_wear.os.fidgettoy"
-            versionCode = 15
+            versionCode = 16
             versionName = "1.6.2"
             buildConfigField("String", "APP_EDITION", "\"fidgettoy\"")
         }
@@ -60,7 +60,7 @@ android {
             dimension = "device"
             minSdk = 31
             applicationId = "bpm.munkz.pulse_wear.os.fidgettoy"
-            versionCode = 16
+            versionCode = 17
             versionName = "1.6.2"
             buildConfigField("String", "APP_EDITION", "\"fidgetphone\"")
         }
