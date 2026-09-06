@@ -1,6 +1,7 @@
 package bpm.munkz.pulse_wear.os.bpm.presentation
 
 import android.content.Context
+import androidx.core.content.edit
 
 internal const val FIDGET_DOCK_PAD_COUNT = 4
 internal const val FIDGET_DOCK_PAD_STATES_KEY = "fidget_dock_pad_states"
@@ -48,10 +49,9 @@ internal fun Context.advanceFidgetDockPad(padIndex: Int): List<Int> {
             symbolIndex
         }
     }
-    getSharedPreferences(FIDGET_SETTINGS_PREFS, Context.MODE_PRIVATE)
-        .edit()
-        .putString(FIDGET_DOCK_PAD_STATES_KEY, updatedStates.joinToString(","))
-        .apply()
+    getSharedPreferences(FIDGET_SETTINGS_PREFS, Context.MODE_PRIVATE).edit {
+        putString(FIDGET_DOCK_PAD_STATES_KEY, updatedStates.joinToString(","))
+    }
     return updatedStates
 }
 

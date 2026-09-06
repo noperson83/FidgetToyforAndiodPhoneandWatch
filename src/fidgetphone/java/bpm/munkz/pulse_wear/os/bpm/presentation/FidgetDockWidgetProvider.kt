@@ -6,11 +6,11 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.VibrationEffect
 import android.os.VibratorManager
 import android.util.TypedValue
 import android.widget.RemoteViews
+import androidx.core.net.toUri
 import bpm.munkz.pulse_wear.os.bpm.R
 
 class FidgetDockWidgetProvider : AppWidgetProvider() {
@@ -84,7 +84,7 @@ class FidgetDockWidgetProvider : AppWidgetProvider() {
     private fun Context.dockPadPendingIntent(padIndex: Int): PendingIntent {
         val intent = Intent(this, FidgetDockWidgetProvider::class.java)
             .setAction(ACTION_FIDGET_DOCK_PAD)
-            .setData(Uri.parse("munkz-fidget://dock/pad/$padIndex"))
+            .setData("munkz-fidget://dock/pad/$padIndex".toUri())
             .putExtra(EXTRA_FIDGET_DOCK_PAD, padIndex)
         return PendingIntent.getBroadcast(
             this,

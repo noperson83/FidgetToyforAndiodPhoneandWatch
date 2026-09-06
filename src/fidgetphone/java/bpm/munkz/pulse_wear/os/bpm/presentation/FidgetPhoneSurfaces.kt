@@ -6,6 +6,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import androidx.core.content.edit
 import bpm.munkz.pulse_wear.os.bpm.BuildConfig
 
 internal const val ACTION_REFRESH_FIDGET_DOCK =
@@ -64,7 +65,7 @@ internal fun Context.incrementFidgetSurfaceCount(): Int {
     val preferences = getSharedPreferences(FIDGET_SETTINGS_PREFS, Context.MODE_PRIVATE)
     val currentCount = preferences.getInt(FIDGET_COUNT_KEY, 0).coerceAtLeast(0)
     val nextCount = if (currentCount == Int.MAX_VALUE) currentCount else currentCount + 1
-    preferences.edit().putInt(FIDGET_COUNT_KEY, nextCount).apply()
+    preferences.edit { putInt(FIDGET_COUNT_KEY, nextCount) }
     return nextCount
 }
 

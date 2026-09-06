@@ -15,6 +15,7 @@ import android.os.SystemClock
 import android.service.wallpaper.WallpaperService
 import android.view.MotionEvent
 import android.view.SurfaceHolder
+import androidx.core.graphics.withRotation
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -343,19 +344,18 @@ class FidgetSpinnerWallpaperService : WallpaperService() {
                     (SystemClock.uptimeMillis() % RAINBOW_ROTATION_MILLIS).toFloat() /
                         RAINBOW_ROTATION_MILLIS * 360f
                     ) * rotationMultiplier
-                canvas.save()
-                canvas.rotate(rotationDegrees, centerX, centerY)
-                linePaint.shader = SweepGradient(
-                    centerX,
-                    centerY,
-                    RAINBOW_RING_COLORS,
-                    null,
-                )
-                linePaint.alpha = alpha.coerceIn(0, 255)
-                canvas.drawCircle(centerX, centerY, radius, linePaint)
-                linePaint.shader = null
-                linePaint.alpha = 255
-                canvas.restore()
+                canvas.withRotation(rotationDegrees, centerX, centerY) {
+                    linePaint.shader = SweepGradient(
+                        centerX,
+                        centerY,
+                        RAINBOW_RING_COLORS,
+                        null,
+                    )
+                    linePaint.alpha = alpha.coerceIn(0, 255)
+                    canvas.drawCircle(centerX, centerY, radius, linePaint)
+                    linePaint.shader = null
+                    linePaint.alpha = 255
+                }
             } else {
                 linePaint.shader = null
                 linePaint.color = withAlpha(snapshot.ringColorArgb, alpha)
@@ -386,8 +386,7 @@ class FidgetSpinnerWallpaperService : WallpaperService() {
                     centerY + sin(radians).toFloat() * armRadius
             }
 
-            canvas.save()
-            canvas.rotate(angleDegrees, centerX, centerY)
+            canvas.withRotation(angleDegrees, centerX, centerY) {
 
             linePaint.color = armColor
             linePaint.strokeWidth = armWidth
@@ -451,7 +450,7 @@ class FidgetSpinnerWallpaperService : WallpaperService() {
                 alpha = alpha,
             )
 
-            canvas.restore()
+            }
         }
 
         private fun drawCenterPiece(

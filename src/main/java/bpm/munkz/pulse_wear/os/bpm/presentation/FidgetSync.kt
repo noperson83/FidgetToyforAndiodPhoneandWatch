@@ -3,6 +3,7 @@ package bpm.munkz.pulse_wear.os.bpm.presentation
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import androidx.core.content.edit
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.wearable.DataClient
@@ -239,9 +240,7 @@ internal class FidgetSyncCoordinator(context: Context) {
         ?.takeIf { saved -> runCatching { UUID.fromString(saved) }.isSuccess }
     private val actorId = savedActorId
         ?: UUID.randomUUID().toString().also { created ->
-            identityPreferences.edit()
-                .putString(ACTOR_KEY, created)
-                .apply()
+            identityPreferences.edit { putString(ACTOR_KEY, created) }
         }
     private val initialEnvelope = initialFidgetSyncEnvelope(
         hasDeviceActor = savedActorId != null,
@@ -299,11 +298,11 @@ internal class FidgetSyncCoordinator(context: Context) {
     }
 
     private fun persistEnvelope() {
-        identityPreferences.edit()
-            .putInt(ENVELOPE_SCHEMA_KEY, ENVELOPE_SCHEMA_VERSION)
-            .putLong(REVISION_KEY, revision)
-            .putString(LAST_ACTOR_KEY, lastAcceptedActorId)
-            .apply()
+        identityPreferences.edit {
+            putInt(ENVELOPE_SCHEMA_KEY, ENVELOPE_SCHEMA_VERSION)
+            putLong(REVISION_KEY, revision)
+            putString(LAST_ACTOR_KEY, lastAcceptedActorId)
+        }
     }
 
     companion object {

@@ -93,6 +93,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.core.content.edit
+import androidx.core.net.toUri
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.layout.ContentScale
@@ -2766,7 +2768,7 @@ private fun FidgetMenuPage(
 
             Spacer(modifier = Modifier.height(sectionSpacing))
 
-            FidgetMenuSectionTitle(text.language, labelFontSize, accentColor)
+            FidgetMenuSectionTitle(text.language, labelFontSize, accentColor = accentColor)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically,
@@ -2789,7 +2791,7 @@ private fun FidgetMenuPage(
 
             Spacer(modifier = Modifier.height(sectionSpacing))
 
-            FidgetMenuSectionTitle(text.links, labelFontSize, accentColor)
+            FidgetMenuSectionTitle(text.links, labelFontSize, accentColor = accentColor)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically,
@@ -2816,7 +2818,7 @@ private fun FidgetMenuPage(
             Spacer(modifier = Modifier.height(sectionSpacing))
 
             if (phoneSurfacesEnabled) {
-                FidgetMenuSectionTitle(text.phoneSurfaces, labelFontSize, accentColor)
+                FidgetMenuSectionTitle(text.phoneSurfaces, labelFontSize, accentColor = accentColor)
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -2855,8 +2857,8 @@ private fun FidgetMenuPage(
                 FidgetMenuSectionTitle(
                     text.motionGestures,
                     labelFontSize,
-                    accentColor,
                     modifier = Modifier.padding(top = tightSpacing),
+                    accentColor = accentColor,
                 )
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterHorizontally),
@@ -2908,8 +2910,8 @@ private fun FidgetMenuPage(
                     FidgetMenuSectionTitle(
                         text.sensitivity,
                         labelFontSize,
-                        accentColor,
                         modifier = Modifier.padding(top = tightSpacing),
+                        accentColor = accentColor,
                     )
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterHorizontally),
@@ -2956,7 +2958,7 @@ private fun FidgetMenuPage(
 
             Spacer(modifier = Modifier.height(sectionSpacing))
 
-            FidgetMenuSectionTitle(text.feedback, labelFontSize, accentColor)
+            FidgetMenuSectionTitle(text.feedback, labelFontSize, accentColor = accentColor)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically,
@@ -3012,7 +3014,7 @@ private fun FidgetMenuPage(
 
             Spacer(modifier = Modifier.height(sectionSpacing))
 
-            FidgetMenuSectionTitle(text.bigBeep, labelFontSize, accentColor)
+            FidgetMenuSectionTitle(text.bigBeep, labelFontSize, accentColor = accentColor)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically,
@@ -3032,7 +3034,7 @@ private fun FidgetMenuPage(
 
             Spacer(modifier = Modifier.height(sectionSpacing))
 
-            FidgetMenuSectionTitle(text.watch, labelFontSize, accentColor)
+            FidgetMenuSectionTitle(text.watch, labelFontSize, accentColor = accentColor)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically,
@@ -3050,7 +3052,7 @@ private fun FidgetMenuPage(
 
             Spacer(modifier = Modifier.height(sectionSpacing))
 
-            FidgetMenuSectionTitle(text.theme, labelFontSize, accentColor)
+            FidgetMenuSectionTitle(text.theme, labelFontSize, accentColor = accentColor)
             Spacer(modifier = Modifier.height(tightSpacing))
             FidgetMenuSectionTitle(
                 text = text.spinnerStyle,
@@ -3067,7 +3069,7 @@ private fun FidgetMenuPage(
             )
             if (phoneSurfacesEnabled) {
                 Spacer(modifier = Modifier.height(tightSpacing))
-                FidgetMenuSectionTitle(text.spinnerLayout, 13.sp, accentColor)
+                FidgetMenuSectionTitle(text.spinnerLayout, 13.sp, accentColor = accentColor)
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                     verticalAlignment = Alignment.CenterVertically,
@@ -3116,7 +3118,7 @@ private fun FidgetMenuPage(
 
             if (phoneLayout) {
                 Spacer(modifier = Modifier.height(tightSpacing))
-                FidgetMenuSectionTitle(text.backgroundImage, labelFontSize, accentColor)
+                FidgetMenuSectionTitle(text.backgroundImage, labelFontSize, accentColor = accentColor)
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                     verticalAlignment = Alignment.CenterVertically,
@@ -3145,7 +3147,7 @@ private fun FidgetMenuPage(
 
             Spacer(modifier = Modifier.height(sectionSpacing))
 
-            FidgetMenuSectionTitle(text.rewards, labelFontSize, accentColor)
+            FidgetMenuSectionTitle(text.rewards, labelFontSize, accentColor = accentColor)
             FidgetSettingsButton(
                 text = text.resetRewards,
                 selected = false,
@@ -3157,7 +3159,7 @@ private fun FidgetMenuPage(
 
             Spacer(modifier = Modifier.height(sectionSpacing))
 
-            FidgetMenuSectionTitle(text.cpu, labelFontSize, accentColor)
+            FidgetMenuSectionTitle(text.cpu, labelFontSize, accentColor = accentColor)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically,
@@ -3248,8 +3250,8 @@ private fun FidgetMenuScrollBar(
 private fun FidgetMenuSectionTitle(
     text: String,
     fontSize: TextUnit,
-    accentColor: Color = MaterialTheme.colorScheme.primary,
     modifier: Modifier = Modifier,
+    accentColor: Color = MaterialTheme.colorScheme.primary,
 ) {
     Text(
         text = text,
@@ -3904,11 +3906,11 @@ private fun Context.openFidgetPlayStoreListing() {
     val packageName = BuildConfig.APPLICATION_ID
     val marketIntent = Intent(
         Intent.ACTION_VIEW,
-        Uri.parse("market://details?id=$packageName"),
+        "market://details?id=$packageName".toUri(),
     )
     val webIntent = Intent(
         Intent.ACTION_VIEW,
-        Uri.parse("https://play.google.com/store/apps/details?id=$packageName&reviewId=0"),
+        "https://play.google.com/store/apps/details?id=$packageName&reviewId=0".toUri(),
     )
 
     runCatching {
@@ -3928,7 +3930,7 @@ private fun Context.isInstalledFromPlay(): Boolean {
 private fun Context.openFidgetPrivacyPolicy() {
     val policyIntent = Intent(
         Intent.ACTION_VIEW,
-        Uri.parse(FIDGET_PRIVACY_POLICY_URL),
+        FIDGET_PRIVACY_POLICY_URL.toUri(),
     )
 
     runCatching {
@@ -3949,7 +3951,7 @@ private fun Context.loadFidgetBackgroundImage(uriString: String?): ImageBitmap? 
     if (uriString.isNullOrBlank()) return null
 
     return runCatching {
-        val source = ImageDecoder.createSource(contentResolver, Uri.parse(uriString))
+        val source = ImageDecoder.createSource(contentResolver, uriString.toUri())
         ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
             val longestEdge = maxOf(info.size.width, info.size.height)
             if (longestEdge > 1_600) {
@@ -4022,48 +4024,45 @@ private fun Context.loadFidgetSettings(): FidgetSettingsState {
 }
 
 private fun Context.saveFidgetSettings(settings: FidgetSettingsState) {
-    getSharedPreferences(FIDGET_SETTINGS_PREFS, Context.MODE_PRIVATE)
-        .edit()
-        .putInt(FIDGET_COUNT_KEY, settings.fidgetCount.coerceAtLeast(0))
-        .putInt(FIDGET_MAIN_COLOR_KEY, settings.mainColorArgb)
-        .putInt(FIDGET_BACKGROUND_COLOR_KEY, settings.backgroundColorArgb)
-        .putString(FIDGET_BACKGROUND_IMAGE_URI_KEY, settings.backgroundImageUri)
-        .putInt(FIDGET_RING_COLOR_KEY, settings.ringColorArgb)
-        .putInt(FIDGET_SPINNER_STYLE_KEY, fidgetSpinnerStyle(settings.spinnerStyleIndex).index)
-        .putBoolean(FIDGET_SPINNER_MULTI_KEY, settings.spinnerMultiEnabled)
-        .putBoolean(FIDGET_HAPTIC_ENABLED_KEY, settings.hapticFeedbackEnabled)
-        .putBoolean(FIDGET_SOUND_ENABLED_KEY, settings.soundFeedbackEnabled)
-        .putInt(FIDGET_SOUND_MODE_KEY, settings.feedbackSoundMode.persistedValue)
-        .putInt(FIDGET_ACCENT_INTENSITY_KEY, settings.accentIntensityMode.persistedValue)
-        .putInt(FIDGET_LANGUAGE_KEY, AppLanguages.indexOf(settings.appLanguage).coerceAtLeast(0))
-        .putBoolean(FIDGET_KEEP_SCREEN_ON_KEY, settings.keepScreenOn)
-        .putBoolean(FIDGET_CPU_VISIBLE_KEY, settings.cpuPercentVisible)
-        .putString(FIDGET_PINNED_TOYS_KEY, settings.pinnedToyIdsCsv)
-        .putBoolean(FIDGET_MOTION_GESTURES_KEY, settings.motionGesturesEnabled)
-        .putInt(FIDGET_GESTURE_CONTROL_MODE_KEY, settings.gestureControlMode.persistedValue)
-        .putBoolean(FIDGET_PHONE_MOTION_KEY, settings.phoneMotionEnabled)
-        .putBoolean(FIDGET_TILT_GESTURE_KEY, settings.tiltGestureEnabled)
-        .putBoolean(FIDGET_SHAKE_GESTURE_KEY, settings.shakeGestureEnabled)
-        .putInt(FIDGET_MOTION_SENSITIVITY_KEY, settings.motionSensitivity.persistedValue)
-        .putFloat(FIDGET_NEUTRAL_TILT_X_KEY, settings.neutralTiltX)
-        .putFloat(FIDGET_NEUTRAL_TILT_Y_KEY, settings.neutralTiltY)
-        .apply()
+    getSharedPreferences(FIDGET_SETTINGS_PREFS, Context.MODE_PRIVATE).edit {
+        putInt(FIDGET_COUNT_KEY, settings.fidgetCount.coerceAtLeast(0))
+        putInt(FIDGET_MAIN_COLOR_KEY, settings.mainColorArgb)
+        putInt(FIDGET_BACKGROUND_COLOR_KEY, settings.backgroundColorArgb)
+        putString(FIDGET_BACKGROUND_IMAGE_URI_KEY, settings.backgroundImageUri)
+        putInt(FIDGET_RING_COLOR_KEY, settings.ringColorArgb)
+        putInt(FIDGET_SPINNER_STYLE_KEY, fidgetSpinnerStyle(settings.spinnerStyleIndex).index)
+        putBoolean(FIDGET_SPINNER_MULTI_KEY, settings.spinnerMultiEnabled)
+        putBoolean(FIDGET_HAPTIC_ENABLED_KEY, settings.hapticFeedbackEnabled)
+        putBoolean(FIDGET_SOUND_ENABLED_KEY, settings.soundFeedbackEnabled)
+        putInt(FIDGET_SOUND_MODE_KEY, settings.feedbackSoundMode.persistedValue)
+        putInt(FIDGET_ACCENT_INTENSITY_KEY, settings.accentIntensityMode.persistedValue)
+        putInt(FIDGET_LANGUAGE_KEY, AppLanguages.indexOf(settings.appLanguage).coerceAtLeast(0))
+        putBoolean(FIDGET_KEEP_SCREEN_ON_KEY, settings.keepScreenOn)
+        putBoolean(FIDGET_CPU_VISIBLE_KEY, settings.cpuPercentVisible)
+        putString(FIDGET_PINNED_TOYS_KEY, settings.pinnedToyIdsCsv)
+        putBoolean(FIDGET_MOTION_GESTURES_KEY, settings.motionGesturesEnabled)
+        putInt(FIDGET_GESTURE_CONTROL_MODE_KEY, settings.gestureControlMode.persistedValue)
+        putBoolean(FIDGET_PHONE_MOTION_KEY, settings.phoneMotionEnabled)
+        putBoolean(FIDGET_TILT_GESTURE_KEY, settings.tiltGestureEnabled)
+        putBoolean(FIDGET_SHAKE_GESTURE_KEY, settings.shakeGestureEnabled)
+        putInt(FIDGET_MOTION_SENSITIVITY_KEY, settings.motionSensitivity.persistedValue)
+        putFloat(FIDGET_NEUTRAL_TILT_X_KEY, settings.neutralTiltX)
+        putFloat(FIDGET_NEUTRAL_TILT_Y_KEY, settings.neutralTiltY)
+    }
     requestFidgetFavoriteComplicationUpdates()
     refreshFidgetPhoneSurfaces()
 }
 
 private fun Context.saveFidgetCount(count: Int) {
-    getSharedPreferences(FIDGET_SETTINGS_PREFS, Context.MODE_PRIVATE)
-        .edit()
-        .putInt(FIDGET_COUNT_KEY, count.coerceAtLeast(0))
-        .apply()
+    getSharedPreferences(FIDGET_SETTINGS_PREFS, Context.MODE_PRIVATE).edit {
+        putInt(FIDGET_COUNT_KEY, count.coerceAtLeast(0))
+    }
 }
 
 private fun Context.saveFidgetPinnedToyIds(pinnedToyIdsCsv: String) {
-    getSharedPreferences(FIDGET_SETTINGS_PREFS, Context.MODE_PRIVATE)
-        .edit()
-        .putString(FIDGET_PINNED_TOYS_KEY, pinnedToyIdsCsv)
-        .apply()
+    getSharedPreferences(FIDGET_SETTINGS_PREFS, Context.MODE_PRIVATE).edit {
+        putString(FIDGET_PINNED_TOYS_KEY, pinnedToyIdsCsv)
+    }
     requestFidgetFavoriteComplicationUpdates()
     refreshFidgetPhoneSurfaces()
 }
@@ -4077,14 +4076,14 @@ private fun Context.loadFidgetDonationCounts(): Map<String, Int> {
 
 private fun Context.saveFidgetDonationCounts(counts: Map<String, Int>): Map<String, Int> {
     val preferences = getSharedPreferences(FIDGET_SETTINGS_PREFS, Context.MODE_PRIVATE)
-    val editor = preferences.edit()
-    FIDGET_DONATION_PRODUCTS.forEach { donation ->
-        editor.putInt(
+    preferences.edit {
+        FIDGET_DONATION_PRODUCTS.forEach { donation ->
+            putInt(
             donation.donationCountKey(),
             counts.getOrDefault(donation.productId, 0).coerceIn(0, 5),
-        )
+            )
+        }
     }
-    editor.apply()
     return loadFidgetDonationCounts()
 }
 
@@ -4096,9 +4095,7 @@ private fun Context.recordFidgetDonation(productId: String): Map<String, Int> {
     val donation = FIDGET_DONATION_PRODUCTS.first { it.productId == productId }
     val updatedCount = (preferences.getInt(donation.donationCountKey(), 0) + 1)
         .coerceAtMost(5)
-    preferences.edit()
-        .putInt(donation.donationCountKey(), updatedCount)
-        .apply()
+    preferences.edit { putInt(donation.donationCountKey(), updatedCount) }
     return loadFidgetDonationCounts()
 }
 
@@ -7483,12 +7480,12 @@ private fun WhackColorButton(
 @Composable
 private fun FidgetTrackNavButton(
     isNext: Boolean,
+    modifier: Modifier = Modifier,
     arrowRotationDegrees: Float = 0f,
     accentColor: Color = MaterialTheme.colorScheme.primary,
     accentColorArgb: Int = NEON_GREEN_COLOR,
     width: Dp = 38.dp,
     height: Dp = 64.dp,
-    modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
     val shape = RoundedCornerShape(14.dp)
@@ -7650,9 +7647,9 @@ private fun FidgetRewardChip(
     text: String,
     ringColor: Color,
     rainbow: Boolean,
+    modifier: Modifier = Modifier,
     phoneLayout: Boolean = false,
     phoneLandscape: Boolean = false,
-    modifier: Modifier = Modifier,
 ) {
     val phonePortrait = phoneLayout && !phoneLandscape
     val chipHeight = when {
