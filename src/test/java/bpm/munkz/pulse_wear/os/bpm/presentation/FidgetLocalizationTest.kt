@@ -7,6 +7,15 @@ import org.junit.Test
 
 class FidgetLocalizationTest {
     @Test
+    fun rewardCountsCompactBeforeTheyOverflowWatchChips() {
+        assertEquals("999", formatFidgetCount(999))
+        assertEquals("1K", formatFidgetCount(1_000))
+        assertEquals("12.3K", formatFidgetCount(12_345))
+        assertEquals("1M", formatFidgetCount(1_000_000))
+        assertEquals("1.3M", formatFidgetCount(1_346_269))
+    }
+
+    @Test
     fun everyToyAndCategoryHasARealSpanishLabel() {
         assertEquals(26, FIDGET_TOY_INFOS.size)
 

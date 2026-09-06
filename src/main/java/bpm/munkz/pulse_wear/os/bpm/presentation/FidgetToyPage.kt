@@ -74,6 +74,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.CornerRadius
@@ -169,10 +170,11 @@ internal fun FidgetToyPage(
     var magSnapPosition by remember { mutableIntStateOf(1) }
     var popGridMask by remember { mutableIntStateOf(0) }
     var infinityFold by remember { mutableIntStateOf(0) }
+    var infinityCardFlipMask by remember { mutableIntStateOf(0) }
     var ratchetStep by remember { mutableIntStateOf(0) }
-    var liquidBlobPosition by remember { mutableStateOf(Offset.Zero) }
-    var liquidBlobTrail by remember { mutableStateOf(emptyList<Offset>()) }
     var liquidMazeWalls by remember { mutableStateOf(generateLiquidMazeWalls()) }
+    var liquidBlobPosition by remember { mutableStateOf(liquidMazeStartPosition(liquidMazeWalls)) }
+    var liquidBlobTrail by remember { mutableStateOf(emptyList<Offset>()) }
     var gearRotation by remember { mutableFloatStateOf(0f) }
     var worryStoneRub by remember { mutableFloatStateOf(0f) }
     var keyClickMask by remember { mutableIntStateOf(0) }
@@ -390,7 +392,7 @@ internal fun FidgetToyPage(
     LaunchedEffect(toyIndex) {
         if (toyIndex == FIDGET_LIQUID_MAZE_INDEX) {
             liquidMazeWalls = generateLiquidMazeWalls()
-            liquidBlobPosition = Offset.Zero
+            liquidBlobPosition = liquidMazeStartPosition(liquidMazeWalls)
             liquidBlobTrail = emptyList()
         }
     }
@@ -859,7 +861,8 @@ internal fun FidgetToyPage(
             phoneLayout -> 10.dp
             else -> 0.dp
         }
-        val navOffsetY = if (phoneLayout) 0.dp else (-3).dp
+        // Keep the watch arrows centered on the measured stage trim, not the screen midpoint.
+        val navOffsetY = if (phoneLayout) 0.dp else (-2).dp
 
         if (phoneLayout && backgroundImageBitmap != null) {
             Image(
@@ -1017,7 +1020,12 @@ internal fun FidgetToyPage(
                     .then(
                         if (toyIndex != FIDGET_MENU_INDEX && toyIndex != FIDGET_WALL_INDEX) {
                             Modifier
-                                .padding(horizontal = 2.dp, vertical = 6.dp)
+                                .padding(
+                                    start = 2.dp,
+                                    top = if (phoneLayout) 6.dp else 1.dp,
+                                    end = 2.dp,
+                                    bottom = if (phoneLayout) 6.dp else 4.dp,
+                                )
                                 .clip(RoundedCornerShape(20.dp))
                                 .background(Color.Black.copy(alpha = 0.16f))
                                 .border(
@@ -1245,6 +1253,12 @@ internal fun FidgetToyPage(
                                     triggerFeedback()
                                     infinityFold = (infinityFold + 1).wrapFidgetIndex(4)
                                 },
+                                flippedCardMask = infinityCardFlipMask,
+                                onCardFlip = { index ->
+                                    triggerFeedback()
+                                    infinityCardFlipMask = infinityCardFlipMask xor (1 shl index)
+                                    infinityFold = (infinityFold + 1).wrapFidgetIndex(4)
+                                },
                             )
                         } else if (toyIndex == FIDGET_RATCHET_RING_INDEX) {
                             RatchetRingFidgetToy(
@@ -1276,7 +1290,7 @@ internal fun FidgetToyPage(
                                 onRefresh = {
                                     triggerFeedback()
                                     liquidMazeWalls = generateLiquidMazeWalls()
-                                    liquidBlobPosition = Offset.Zero
+                                    liquidBlobPosition = liquidMazeStartPosition(liquidMazeWalls)
                                     liquidBlobTrail = emptyList()
                                 },
                             )
@@ -1470,6 +1484,7 @@ internal fun FidgetToyPage(
                                 on = homeFanOn,
                                 rotation = homeFanRotation,
                                 accentColor = mainColor,
+                                accentColorArgb = mainColorArgb,
                                 onToggle = {
                                     triggerFeedback()
                                     homeFanOn = !homeFanOn
@@ -1919,10 +1934,15 @@ private const val FIDGET_MAZE_COLUMNS = 5
 private const val FIDGET_MAZE_ROWS = 5
 private const val FIDGET_MAZE_CELL_COUNT = FIDGET_MAZE_COLUMNS * FIDGET_MAZE_ROWS
 
-private data class LiquidMazeWall(
+internal data class LiquidMazeWall(
     val start: Offset,
     val end: Offset,
 )
+
+private const val LIQUID_MAZE_BLOB_RADIUS_DP = 11f
+private const val LIQUID_MAZE_WALL_CLEARANCE_DP = 13f
+private const val LIQUID_MAZE_BOARD_LIMIT_DP = 35f
+private const val LIQUID_MAZE_MAX_STEP_DP = 5f
 
 private fun generateLiquidMazeWalls(): List<LiquidMazeWall> {
     val layouts = listOf(
@@ -1958,27 +1978,39 @@ private fun generateLiquidMazeWalls(): List<LiquidMazeWall> {
     return layouts.random()
 }
 
-private fun moveLiquidMazeBlob(
+internal fun moveLiquidMazeBlob(
     position: Offset,
     delta: Offset,
     walls: List<LiquidMazeWall>,
 ): Offset {
-    val radius = 10f
-    val bounded = (position + delta).limitedToBox(45f, 45f)
-    val xCandidate = bounded.copy(y = position.y)
-    val nextX = if (liquidMazeBlocked(xCandidate, walls, radius)) {
-        position.x + delta.x * 0.12f
-    } else {
-        xCandidate.x
+    val movement = delta.limitedToLength(LIQUID_MAZE_MAX_STEP_DP)
+    val stepCount = (movement.vectorLength() / 1.5f).toInt().coerceIn(1, 4)
+    val step = movement * (1f / stepCount)
+    var current = position.limitedToBox(LIQUID_MAZE_BOARD_LIMIT_DP, LIQUID_MAZE_BOARD_LIMIT_DP)
+
+    repeat(stepCount) {
+        val xCandidate = Offset(current.x + step.x, current.y)
+            .limitedToBox(LIQUID_MAZE_BOARD_LIMIT_DP, LIQUID_MAZE_BOARD_LIMIT_DP)
+        if (!liquidMazeBlocked(xCandidate, walls, LIQUID_MAZE_WALL_CLEARANCE_DP)) {
+            current = xCandidate
+        }
+
+        val yCandidate = Offset(current.x, current.y + step.y)
+            .limitedToBox(LIQUID_MAZE_BOARD_LIMIT_DP, LIQUID_MAZE_BOARD_LIMIT_DP)
+        if (!liquidMazeBlocked(yCandidate, walls, LIQUID_MAZE_WALL_CLEARANCE_DP)) {
+            current = yCandidate
+        }
     }
-    val afterX = Offset(nextX, position.y).limitedToBox(45f, 45f)
-    val yCandidate = bounded.copy(x = afterX.x)
-    val nextY = if (liquidMazeBlocked(yCandidate, walls, radius)) {
-        position.y + delta.y * 0.12f
-    } else {
-        yCandidate.y
-    }
-    return Offset(nextX, nextY).limitedToBox(45f, 45f)
+    return current
+}
+
+internal fun liquidMazeStartPosition(walls: List<LiquidMazeWall>): Offset {
+    val candidates = (-32..32 step 8)
+        .flatMap { y -> (-32..32 step 8).map { x -> Offset(x.toFloat(), y.toFloat()) } }
+        .sortedBy { it.vectorLength() }
+    return candidates.firstOrNull { candidate ->
+        !liquidMazeBlocked(candidate, walls, LIQUID_MAZE_WALL_CLEARANCE_DP)
+    } ?: Offset.Zero
 }
 
 private fun liquidMazeBlocked(
@@ -2269,7 +2301,9 @@ internal fun fidgetTextFor(language: AppLanguage): FidgetText {
             pin = "Pin",
             pinned = "Pinned",
             soon = "Soon",
-            rewardLine = { count, nextReward -> "$count  |  $nextReward reward" },
+            rewardLine = { count, nextReward ->
+                "${formatFidgetCount(count)}  |  ${formatFidgetCount(nextReward)} reward"
+            },
             links = "Links",
             review = "Review",
             donate = "Donate",
@@ -2346,7 +2380,9 @@ internal fun fidgetTextFor(language: AppLanguage): FidgetText {
             pin = "Fijar",
             pinned = "Fijado",
             soon = "Pronto",
-            rewardLine = { count, nextReward -> "$count  |  premio en $nextReward" },
+            rewardLine = { count, nextReward ->
+                "${formatFidgetCount(count)}  |  premio en ${formatFidgetCount(nextReward)}"
+            },
             links = "Enlaces",
             review = "Reseña",
             donate = "Donar",
@@ -2683,13 +2719,9 @@ private fun FidgetMenuPage(
             watchSClass -> 104.dp
             else -> 132.dp
         }
-        val doneButtonText = if (phoneLayout) {
-            when (appLanguage) {
-                AppLanguage.English -> "Save"
-                AppLanguage.Spanish -> "Guardar"
-            }
-        } else {
-            text.done
+        val doneButtonText = when (appLanguage) {
+            AppLanguage.English -> "Save"
+            AppLanguage.Spanish -> "Guardar"
         }
         val doneButtonModifier = when {
             phoneLayout -> Modifier
@@ -2700,8 +2732,8 @@ private fun FidgetMenuPage(
             else -> Modifier
                 .align(Alignment.TopEnd)
                 .padding(
-                    top = if (watchSClass) 22.dp else 25.dp,
-                    end = if (watchSClass) 22.dp else 25.dp,
+                    top = if (watchSClass) 15.dp else 18.dp,
+                    end = if (watchSClass) 14.dp else 16.dp,
                 )
                 .zIndex(4f)
                 .rotate(38f)
@@ -4192,6 +4224,20 @@ private fun Offset.toMazeDirection(): MazeDirection? {
     }
 }
 
+internal fun formatFidgetCount(value: Int): String {
+    if (value < 1_000) return value.toString()
+
+    val (unit, suffix) = if (value >= 1_000_000) {
+        1_000_000 to "M"
+    } else {
+        1_000 to "K"
+    }
+    val tenths = value.toLong() * 10L / unit
+    val whole = tenths / 10L
+    val decimal = tenths % 10L
+    return if (decimal == 0L) "$whole$suffix" else "$whole.$decimal$suffix"
+}
+
 private fun isFibonacciReward(count: Int): Boolean {
     if (count <= 0) return false
     var previous = 1
@@ -5448,6 +5494,19 @@ private fun PopGridFidgetToy(
                 Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                     repeat(4) { column ->
                         val index = row * 4 + column
+                        if (index == 3) {
+                            FidgetThemeButton(
+                                text = "R",
+                                modifier = Modifier.size(23.dp),
+                                fontSize = 8.sp,
+                                selected = true,
+                                prominent = true,
+                                accentColor = Color(0xFF56F1C8),
+                                accentColorArgb = 0xFF56F1C8.toInt(),
+                                onClick = onReset,
+                            )
+                            return@repeat
+                        }
                         val popped = popMask and (1 shl index) != 0
                         Box(
                             modifier = Modifier
@@ -5469,11 +5528,6 @@ private fun PopGridFidgetToy(
                 }
             }
         }
-        FidgetCornerResetButton(
-            accentColor = Color(0xFF56F1C8),
-            accentColorArgb = 0xFF56F1C8.toInt(),
-            onClick = onReset,
-        )
     }
 }
 
@@ -5481,7 +5535,16 @@ private fun PopGridFidgetToy(
 private fun InfinityFlipFidgetToy(
     fold: Int,
     onFlip: () -> Unit,
+    flippedCardMask: Int,
+    onCardFlip: (Int) -> Unit,
 ) {
+    val density = LocalDensity.current
+    val cardColors = listOf(
+        Color(0xFFFFC857),
+        Color(0xFF56F1C8),
+        Color(0xFFEF476F),
+        Color(0xFF8D6BFF),
+    )
     Box(
         modifier = Modifier
             .size(118.dp)
@@ -5495,6 +5558,18 @@ private fun InfinityFlipFidgetToy(
             val column = index % 2
             val row = index / 2
             val open = (fold + index) % 4
+            val flipped = flippedCardMask and (1 shl index) != 0
+            val flipProgress by animateFloatAsState(
+                targetValue = if (flipped) 1f else 0f,
+                animationSpec = tween(durationMillis = 280),
+                label = "infinityCardFlip$index",
+            )
+            val baseColor = cardColors[index]
+            val cardColor = if (flipProgress < 0.5f) {
+                baseColor
+            } else {
+                Color(1f - baseColor.red, 1f - baseColor.green, 1f - baseColor.blue)
+            }
             Box(
                 modifier = Modifier
                     .offset(
@@ -5502,17 +5577,17 @@ private fun InfinityFlipFidgetToy(
                         y = ((row - 0.5f) * (34 + (3 - open) * 3)).dp,
                     )
                     .rotate((fold * 18f + index * 7f) % 45f)
+                    .graphicsLayer {
+                        rotationY = flipProgress * 180f
+                        cameraDistance = 12f * density.density
+                    }
                     .size(34.dp)
                     .clip(RoundedCornerShape(7.dp))
-                    .background(
-                        listOf(
-                            Color(0xFFFFC857),
-                            Color(0xFF56F1C8),
-                            Color(0xFFEF476F),
-                            Color(0xFF8D6BFF),
-                        )[index],
-                    )
-                    .border(1.dp, Color.White.copy(alpha = 0.44f), RoundedCornerShape(7.dp)),
+                    .background(cardColor)
+                    .border(1.dp, Color.White.copy(alpha = 0.44f), RoundedCornerShape(7.dp))
+                    .clickable {
+                        onCardFlip(index)
+                    },
             )
         }
     }
@@ -5615,7 +5690,7 @@ private fun LiquidMazeFidgetToy(
                     color = wallColor,
                     start = center + Offset(wall.start.x.dp.toPx(), wall.start.y.dp.toPx()),
                     end = center + Offset(wall.end.x.dp.toPx(), wall.end.y.dp.toPx()),
-                    strokeWidth = 2.dp.toPx(),
+                    strokeWidth = 3.dp.toPx(),
                 )
             }
             val blobCenter = center + Offset(blobPosition.x.dp.toPx(), blobPosition.y.dp.toPx())
@@ -5630,7 +5705,7 @@ private fun LiquidMazeFidgetToy(
             val wobble = sin(waterPhase * 4.2f) * 2.2f
             drawCircle(
                 color = Color(0xFF56F1C8).copy(alpha = 0.22f),
-                radius = (18f + sin(waterPhase * 2.4f) * 2f).dp.toPx(),
+                radius = (LIQUID_MAZE_BLOB_RADIUS_DP + 7f + sin(waterPhase * 2.4f) * 2f).dp.toPx(),
                 center = blobCenter,
                 style = Stroke(width = 1.5.dp.toPx()),
             )
@@ -5644,8 +5719,8 @@ private fun LiquidMazeFidgetToy(
                     center = blobCenter + Offset(-3.dp.toPx(), -4.dp.toPx()),
                     radius = 18.dp.toPx(),
                 ),
-                topLeft = blobCenter + Offset((-11f + wobble).dp.toPx(), -10.dp.toPx()),
-                size = Size(22.dp.toPx(), 19.dp.toPx()),
+                topLeft = blobCenter + Offset((-LIQUID_MAZE_BLOB_RADIUS_DP + wobble).dp.toPx(), (-10f).dp.toPx()),
+                size = Size((LIQUID_MAZE_BLOB_RADIUS_DP * 2f).dp.toPx(), 19.dp.toPx()),
             )
             drawCircle(Color.White.copy(alpha = 0.72f), 3.dp.toPx(), blobCenter + Offset(-4.dp.toPx(), -5.dp.toPx()))
         }
@@ -6324,7 +6399,7 @@ private fun MazeFidgetToy(
     val boardShape = RoundedCornerShape(16.dp)
     Box(
         modifier = Modifier
-            .size(118.dp)
+            .size(126.dp)
             .background(Color.White.copy(alpha = 0.06f), boardShape)
             .border(1.dp, Color(0xFF56F1C8).copy(alpha = 0.72f), boardShape)
             .pointerInput(puzzle) {
@@ -6584,25 +6659,32 @@ internal data class BallSortMoveResult(
 
 internal fun generateBallSortMaze(random: Random = Random.Default): BallSortMaze {
     val pocketCandidates = listOf(
-        Offset(-39f, -38f),
-        Offset(39f, -38f),
-        Offset(-39f, 38f),
-        Offset(39f, 38f),
+        Offset(-34f, -32f),
+        Offset(34f, -32f),
+        Offset(-34f, 32f),
+        Offset(34f, 32f),
     ).shuffled(random)
     val startCandidates = listOf(
-        Offset(-22f, -6f),
-        Offset(20f, -4f),
-        Offset(0f, 24f),
-        Offset(0f, -24f),
+        Offset(-24f, -8f),
+        Offset(24f, -8f),
+        Offset(-18f, 20f),
+        Offset(18f, 20f),
+        Offset(0f, -28f),
+        Offset(0f, 28f),
+        Offset(-28f, 0f),
+        Offset(28f, 0f),
     ).shuffled(random)
-    val obstacles = listOf(
-        Offset(-10f, 10f),
-        Offset(12f, -12f),
-    ).shuffled(random)
+    val resetTarget = offsetAtDegrees(
+        angleDegrees = random.nextInt(0, 360).toFloat(),
+        radius = BALL_SORT_RESET_ORBIT_RADIUS_DP,
+    )
+    val safeStarts = startCandidates.filter { candidate ->
+        (candidate - resetTarget).vectorLength() >= BALL_SORT_START_CLEARANCE_DP
+    }
     return BallSortMaze(
         pocketPositions = pocketCandidates.take(BALL_SORT_BALL_COUNT),
-        startPositions = startCandidates.take(BALL_SORT_BALL_COUNT),
-        obstaclePositions = obstacles,
+        startPositions = safeStarts.take(BALL_SORT_BALL_COUNT),
+        obstaclePositions = listOf(resetTarget),
     )
 }
 
@@ -6658,6 +6740,7 @@ private fun BallSortMazeFidgetToy(
     Box(
         modifier = Modifier
             .size(118.dp)
+            .clip(boardShape)
             .background(Color.White.copy(alpha = 0.06f), boardShape)
             .border(1.dp, Color(0xFFEF476F).copy(alpha = 0.72f), boardShape)
             .pointerInput(maze) {
@@ -6674,20 +6757,12 @@ private fun BallSortMazeFidgetToy(
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val center = Offset(size.width / 2f, size.height / 2f)
-            maze.obstaclePositions.forEach { obstacle ->
-                val obstacleCenter = center + Offset(obstacle.x.dp.toPx(), obstacle.y.dp.toPx())
-                drawCircle(
-                    color = Color.Black.copy(alpha = 0.52f),
-                    radius = 8.dp.toPx(),
-                    center = obstacleCenter,
-                )
-                drawCircle(
-                    color = Color.White.copy(alpha = 0.22f),
-                    radius = 8.dp.toPx(),
-                    center = obstacleCenter,
-                    style = Stroke(width = 1.dp.toPx()),
-                )
-            }
+            drawCircle(
+                color = Color(0xFFEF476F).copy(alpha = 0.18f),
+                radius = BALL_SORT_RESET_ORBIT_RADIUS_DP.dp.toPx(),
+                center = center,
+                style = Stroke(width = 1.dp.toPx()),
+            )
             maze.pocketPositions.forEachIndexed { index, pocket ->
                 val pocketCenter = center + Offset(pocket.x.dp.toPx(), pocket.y.dp.toPx())
                 drawCircle(
@@ -6715,26 +6790,38 @@ private fun BallSortMazeFidgetToy(
                 )
             }
         }
-        FidgetCornerResetButton(
-            accentColor = Color(0xFFEF476F),
-            accentColorArgb = 0xFFEF476F.toInt(),
-            onClick = onRefresh,
-        )
+        maze.obstaclePositions.firstOrNull()?.let { resetTarget ->
+            FidgetThemeButton(
+                text = "R",
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .offset(x = resetTarget.x.dp, y = resetTarget.y.dp)
+                    .size(26.dp),
+                fontSize = 9.sp,
+                selected = true,
+                prominent = true,
+                accentColor = Color(0xFFEF476F),
+                accentColorArgb = 0xFFEF476F.toInt(),
+                onClick = onRefresh,
+            )
+        }
     }
 }
 
 private val CENTER_DROP_RING_RADII_DP = listOf(16f, 29f, 42f)
 internal const val CENTER_DROP_HOLE_RADIUS_DP = 6f
 private const val CENTER_DROP_BALL_RADIUS_DP = 5f
-private const val CENTER_DROP_START_RADIUS_DP = 49f
-private const val CENTER_DROP_BOARD_LIMIT_DP = 50f
+private const val CENTER_DROP_START_RADIUS_DP = 47f
+private const val CENTER_DROP_BOARD_LIMIT_DP = 48f
 private const val CENTER_DROP_MAX_STEP_DP = 6f
 private const val CENTER_DROP_GATE_HALF_WIDTH_DEGREES = 17f
 internal const val BALL_SORT_BALL_COUNT = 3
 private const val BALL_SORT_BALL_RADIUS_DP = 6f
-private const val BALL_SORT_BOARD_LIMIT_DP = 49f
+private const val BALL_SORT_BOARD_LIMIT_DP = 42f
 private const val BALL_SORT_MAX_STEP_DP = 6f
-private const val BALL_SORT_OBSTACLE_CLEARANCE_DP = 14f
+private const val BALL_SORT_OBSTACLE_CLEARANCE_DP = 20f
+internal const val BALL_SORT_RESET_ORBIT_RADIUS_DP = 18f
+internal const val BALL_SORT_START_CLEARANCE_DP = 22f
 private const val BALL_SORT_POCKET_LOCK_DISTANCE_DP = 8f
 private val BALL_SORT_COLORS = listOf(
     Color(0xFFFFC857),
@@ -6752,10 +6839,10 @@ private fun BoxScope.FidgetCornerResetButton(
         text = "R",
         modifier = Modifier
             .align(Alignment.TopEnd)
-            .offset(x = 12.dp, y = (-7).dp)
+            .padding(top = 8.dp, end = 8.dp)
             .zIndex(3f)
-            .size(width = 24.dp, height = 22.dp),
-        fontSize = 8.sp,
+            .size(width = 28.dp, height = 26.dp),
+        fontSize = 9.sp,
         selected = true,
         prominent = true,
         accentColor = accentColor,
@@ -6808,9 +6895,9 @@ private fun WindowFidgetToy(
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val frameLeft = 10.dp.toPx()
-            val frameTop = 13.dp.toPx()
+            val frameTop = 10.dp.toPx()
             val frameWidth = size.width - 20.dp.toPx()
-            val frameHeight = 76.dp.toPx()
+            val frameHeight = 66.dp.toPx()
             val innerLeft = frameLeft + 5.dp.toPx()
             val innerTop = frameTop + 5.dp.toPx()
             val innerHeight = frameHeight - 10.dp.toPx()
@@ -6842,8 +6929,8 @@ private fun WindowFidgetToy(
             drawRect(Color(0xFF17242B), Offset(innerLeft, innerTop), Size(frameWidth - 10.dp.toPx(), innerHeight), style = Stroke(2.dp.toPx()))
             drawLine(
                 color = Color.White.copy(alpha = 0.52f),
-                start = Offset(frameLeft + 3.dp.toPx(), frameTop + frameHeight + 7.dp.toPx()),
-                end = Offset(size.width - frameLeft - 3.dp.toPx(), frameTop + frameHeight + 7.dp.toPx()),
+                start = Offset(frameLeft + 3.dp.toPx(), frameTop + frameHeight + 5.dp.toPx()),
+                end = Offset(size.width - frameLeft - 3.dp.toPx(), frameTop + frameHeight + 5.dp.toPx()),
                 strokeWidth = 3.dp.toPx(),
             )
         }
@@ -6898,14 +6985,14 @@ private fun DoorFidgetToy(
                 return start + (end - start) * amount
             }
 
-            val frameLeft = px(18f)
-            val frameTop = px(9f)
-            val frameWidth = px(82f)
-            val frameHeight = px(89f)
-            val openingLeft = px(25f)
-            val openingTop = px(17f)
-            val openingWidth = px(68f)
-            val openingHeight = px(77f)
+            val frameLeft = px(16f)
+            val frameTop = px(7f)
+            val frameWidth = px(78f)
+            val frameHeight = px(78f)
+            val openingLeft = px(22f)
+            val openingTop = px(14f)
+            val openingWidth = px(64f)
+            val openingHeight = px(65f)
 
             drawRect(Color(0xFF1A2428), Offset(frameLeft, frameTop), Size(frameWidth, frameHeight))
             drawRect(Color(0xFF05090B), Offset(openingLeft, openingTop), Size(openingWidth, openingHeight))
@@ -6917,8 +7004,8 @@ private fun DoorFidgetToy(
             )
             drawLine(
                 color = Color(0xFFE0A16B).copy(alpha = 0.72f),
-                start = Offset(px(19f), px(96f)),
-                end = Offset(px(101f), px(96f)),
+                start = Offset(px(17f), px(87f)),
+                end = Offset(px(93f), px(87f)),
                 strokeWidth = px(4f),
             )
 
@@ -6932,22 +7019,22 @@ private fun DoorFidgetToy(
 
             // CD is fixed at the hinge. AB is the free edge that passes edge-on
             // over CD, then settles just to its right in the open position.
-            val pointC = Offset(px(25f), px(17f))
-            val pointD = Offset(px(25f), px(94f))
+            val pointC = Offset(px(22f), px(14f))
+            val pointD = Offset(px(22f), px(79f))
             val freeEdgeX = if (approachingHinge) {
-                interpolate(93f, 25f, phase)
+                interpolate(86f, 22f, phase)
             } else {
-                interpolate(25f, 48f, phase)
+                interpolate(22f, 44f, phase)
             }
             val freeEdgeTop = if (approachingHinge) {
-                interpolate(17f, 8f, phase)
+                interpolate(14f, 7f, phase)
             } else {
-                interpolate(8f, 22f, phase)
+                interpolate(7f, 18f, phase)
             }
             val freeEdgeBottom = if (approachingHinge) {
-                interpolate(94f, 103f, phase)
+                interpolate(79f, 88f, phase)
             } else {
-                interpolate(103f, 91f, phase)
+                interpolate(88f, 77f, phase)
             }
             val freeEdgeLean = if (approachingHinge) 0f else phase * 2f
             val pointB = Offset(px(freeEdgeX), px(freeEdgeTop))
@@ -7040,6 +7127,7 @@ private fun FanFidgetToy(
     on: Boolean,
     rotation: Float,
     accentColor: Color,
+    accentColorArgb: Int,
     onToggle: () -> Unit,
 ) {
     Box(
@@ -7099,9 +7187,18 @@ private fun FanFidgetToy(
                 )
             }
         }
-        FidgetHorizontalToggleSwitch(
-            switchedOn = on,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 7.dp),
+        FidgetThemeButton(
+            text = if (on) "Breeze" else "Start",
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 5.dp)
+                .width(48.dp)
+                .height(22.dp),
+            fontSize = 7.sp,
+            selected = on,
+            prominent = true,
+            accentColor = accentColor,
+            accentColorArgb = accentColorArgb,
             onClick = onToggle,
         )
     }
@@ -7119,6 +7216,7 @@ private fun SinkFidgetToy(
     val waterColor = when {
         hotOn && !coldOn -> Color(0xFFFF8C75)
         coldOn && !hotOn -> Color(0xFF48CFF3)
+        hotOn && coldOn -> Color(0xFFA56CFF)
         else -> Color(0xFF70D9E8)
     }
     val flowAmount by animateFloatAsState(

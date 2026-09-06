@@ -47,7 +47,7 @@ class FidgetMazePhysicsTest {
         val maze = generateCenterDropMaze(Random(12))
 
         assertEquals(3, maze.gateAnglesDegrees.size)
-        assertTrue(maze.startPosition.getDistance() in 48.9f..49.1f)
+        assertTrue(maze.startPosition.getDistance() in 46.9f..47.1f)
     }
 
     @Test
@@ -93,5 +93,45 @@ class FidgetMazePhysicsTest {
         assertFalse(moved.locked[1])
         assertFalse(moved.locked[2])
         assertEquals(maze.pocketPositions[0], moved.positions[0])
+    }
+
+    @Test
+    fun ballSortKeepsBallsInsideTheBoard() {
+        val maze = BallSortMaze(
+            pocketPositions = List(BALL_SORT_BALL_COUNT) { Offset.Zero },
+            startPositions = List(BALL_SORT_BALL_COUNT) { Offset(41f, 41f) },
+            obstaclePositions = emptyList(),
+        )
+
+        val moved = moveBallSortBalls(
+            positions = maze.startPositions,
+            locked = List(BALL_SORT_BALL_COUNT) { false },
+            maze = maze,
+            delta = Offset(18f, 18f),
+        )
+
+        moved.positions.forEach { position ->
+            assertTrue(position.x <= 42f)
+            assertTrue(position.y <= 42f)
+        }
+    }
+
+    @Test
+    fun ballSortUsesOneMovingResetTargetAndSafeStarts() {
+        repeat(12) { seed ->
+            val maze = generateBallSortMaze(Random(seed))
+
+            assertEquals(1, maze.obstaclePositions.size)
+            assertEquals(BALL_SORT_BALL_COUNT, maze.startPositions.size)
+            assertTrue(
+                maze.obstaclePositions.single().getDistance() in
+                    (BALL_SORT_RESET_ORBIT_RADIUS_DP - 0.1f)..(BALL_SORT_RESET_ORBIT_RADIUS_DP + 0.1f),
+            )
+            maze.startPositions.forEach { start ->
+                assertTrue(
+                    (start - maze.obstaclePositions.single()).getDistance() >= BALL_SORT_START_CLEARANCE_DP,
+                )
+            }
+        }
     }
 }
