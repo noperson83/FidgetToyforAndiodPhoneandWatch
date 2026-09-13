@@ -8,7 +8,7 @@ updates remain compatible with installed releases.
 
 ### Short description
 
-Spin, tap, tilt, pop, and play with satisfying fidgets on phone and watch.
+Spin, tap, tilt, and play colorful fidgets on your phone and Wear OS watch.
 
 ### Full description
 
@@ -48,12 +48,40 @@ Every fidget has its own movement, personality, and satisfying response.
 - **Center Drop:** Guide a silver ball through circular gates toward the center hole.
 - **Ball Sort:** Steer three colored balls through obstacles and settle each into its matching pocket.
 
-Make the experience yours with customizable themes, spinner designs, colors,
-sound, screen flashes, and vibration feedback. Pin one favorite toy, collect tap
-rewards, keep phone and watch preferences in step, place the Fidget Dock on
-your home screen, or bring an interactive spinner to your wallpaper.
+Make the experience yours with themes, color and Big Ring choices, photo
+backgrounds, Single or Multi spinner layouts, sound, screen flashes, and
+vibration feedback. Pin one favorite toy, collect tap rewards, keep paired phone
+and watch preferences in step, place the Fidget Dock on your home screen, or
+bring an interactive spinner to your wallpaper.
+
+On Wear OS, add Favorite Fidget to a compatible watch face for a quick launch.
+Wear OS calls this type of watch-face shortcut a complication. It shows your
+starred toy in its current theme; tap it to open that toy in the app.
+
+#### Optional motion play
+
+Touch is always ready. When you want a hands-on twist, turn on Motion in Menu,
+choose a sensitivity, and calibrate your neutral position. Tilt guides Liquid
+Maze, Maze Shuffle, Center Drop, and Ball Sort; a gentle shake refreshes the
+three maze boards. Motion is optional, and every supported toy still has touch
+controls.
 
 Spin it. Tap it. Tilt it. Make it yours.
+
+## Rewards and support
+
+- Tap totals and pinned favorites persist locally and sync between compatible
+  paired phone and Wear OS devices.
+- Fibonacci milestones can trigger a reward moment. Choose Calm, Glow, or
+  Celebrate feedback in Menu; Celebrate adds a short positive message, flash,
+  and stronger haptic feedback when supported by the device.
+- The reward chip opens progress toward the next milestone, and rewards can be
+  reset from Menu.
+- Optional, consumable $1, $3, $5, and $10 donations are handled by Google
+  Play Billing. Donation badges are stored locally, support repeat donations,
+  and can sync to a paired device.
+- The review dialog links to the app's Fidget-specific privacy policy at
+  `https://www.labmunkz.com/MunkzFidgetToy/privacy`.
 
 ## Variants
 

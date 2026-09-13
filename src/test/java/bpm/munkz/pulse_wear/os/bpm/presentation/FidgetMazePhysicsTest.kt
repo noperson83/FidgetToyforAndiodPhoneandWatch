@@ -9,35 +9,33 @@ import org.junit.Test
 
 class FidgetMazePhysicsTest {
     @Test
-    fun motionTiltMazesLockTheCurrentScreenOrientation() {
-        listOf(7, 13, 25, 26).forEach { toyIndex ->
-            assertTrue(
-                shouldLockFidgetMotionOrientation(
-                    motionInputEnabled = true,
-                    tiltGestureEnabled = true,
-                    toyIndex = toyIndex,
-                ),
-            )
-        }
-        assertFalse(
-            shouldLockFidgetMotionOrientation(
+    fun wearMotionKeepsScreenOnWithoutLockingOrientation() {
+        assertTrue(
+            shouldKeepFidgetScreenOn(
+                manualKeepScreenOn = false,
+                wearEdition = true,
+                motionInputEnabled = true,
+            ),
+        )
+        assertTrue(
+            shouldKeepFidgetScreenOn(
+                manualKeepScreenOn = true,
+                wearEdition = false,
                 motionInputEnabled = false,
-                tiltGestureEnabled = true,
-                toyIndex = 25,
             ),
         )
         assertFalse(
-            shouldLockFidgetMotionOrientation(
+            shouldKeepFidgetScreenOn(
+                manualKeepScreenOn = false,
+                wearEdition = false,
                 motionInputEnabled = true,
-                tiltGestureEnabled = false,
-                toyIndex = 25,
             ),
         )
         assertFalse(
-            shouldLockFidgetMotionOrientation(
-                motionInputEnabled = true,
-                tiltGestureEnabled = true,
-                toyIndex = 1,
+            shouldKeepFidgetScreenOn(
+                manualKeepScreenOn = false,
+                wearEdition = true,
+                motionInputEnabled = false,
             ),
         )
     }

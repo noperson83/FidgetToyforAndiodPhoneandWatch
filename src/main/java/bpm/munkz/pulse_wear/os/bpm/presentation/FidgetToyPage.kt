@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
-import android.content.pm.ActivityInfo
 import android.graphics.ImageDecoder
 import android.media.AudioAttributes
 import android.media.AudioManager
@@ -145,6 +144,9 @@ internal fun FidgetToyPage(
     var spinVelocityDegreesPerSecond by remember { mutableFloatStateOf(0f) }
     var touchPulse by remember { mutableFloatStateOf(0f) }
     var rewardPulse by remember { mutableFloatStateOf(0f) }
+    var rewardFlash by remember { mutableFloatStateOf(0f) }
+    var rewardProgressPopupOpen by rememberSaveable { mutableStateOf(false) }
+    var rewardMomentMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var fidgetCount by rememberSaveable { mutableIntStateOf(savedSettings.fidgetCount) }
     var mainColorArgb by rememberSaveable { mutableIntStateOf(savedSettings.mainColorArgb) }
     var backgroundColorArgb by rememberSaveable { mutableIntStateOf(savedSettings.backgroundColorArgb) }
@@ -174,11 +176,12 @@ internal fun FidgetToyPage(
     var infinityFold by remember { mutableIntStateOf(0) }
     var infinityCardFlipMask by remember { mutableIntStateOf(0) }
     var ratchetStep by remember { mutableIntStateOf(0) }
-    var liquidMazeWalls by remember { mutableStateOf(generateLiquidMazeWalls()) }
-    var liquidBlobPosition by remember { mutableStateOf(liquidMazeStartPosition(liquidMazeWalls)) }
+    var liquidMazePuzzle by remember { mutableStateOf(generateLiquidMazePuzzle()) }
+    var liquidBlobPosition by remember { mutableStateOf(liquidMazeStartPosition(liquidMazePuzzle)) }
     var liquidBlobTrail by remember { mutableStateOf(emptyList<Offset>()) }
     var gearRotation by remember { mutableFloatStateOf(0f) }
     var worryStoneRub by remember { mutableFloatStateOf(0f) }
+    var worryStoneTouchPoint by remember { mutableStateOf<Offset?>(null) }
     var keyClickMask by remember { mutableIntStateOf(0) }
     var dockPadStates by remember { mutableStateOf(context.loadFidgetDockPadStates()) }
     var zenTracePoints by remember { mutableStateOf(emptyList<Offset>()) }
@@ -206,6 +209,7 @@ internal fun FidgetToyPage(
     var soundFeedbackEnabled by rememberSaveable { mutableStateOf(savedSettings.soundFeedbackEnabled) }
     var feedbackSoundMode by rememberSaveable { mutableStateOf(savedSettings.feedbackSoundMode) }
     var accentIntensityMode by rememberSaveable { mutableStateOf(savedSettings.accentIntensityMode) }
+    var rewardStyle by rememberSaveable { mutableStateOf(savedSettings.rewardStyle) }
     var appLanguage by rememberSaveable { mutableStateOf(savedSettings.appLanguage) }
     var keepScreenOn by rememberSaveable { mutableStateOf(savedSettings.keepScreenOn) }
     var cpuPercentVisible by rememberSaveable { mutableStateOf(savedSettings.cpuPercentVisible) }
@@ -275,10 +279,10 @@ internal fun FidgetToyPage(
         FidgetFeedbackController(context.applicationContext)
     }
     val hostActivity = remember(context) { context.findActivity() }
-    val lockMotionOrientation = shouldLockFidgetMotionOrientation(
+    val effectiveKeepScreenOn = shouldKeepFidgetScreenOn(
+        manualKeepScreenOn = keepScreenOn,
+        wearEdition = wearEdition,
         motionInputEnabled = motionInputEnabled,
-        tiltGestureEnabled = tiltGestureEnabled,
-        toyIndex = toyIndex,
     )
     val donationCoordinator = remember(context, isInstalledFromPlay) {
         if (!isInstalledFromPlay) {
@@ -355,32 +359,15 @@ internal fun FidgetToyPage(
         }
     }
 
-    DisposableEffect(hostActivity, keepScreenOn) {
+    DisposableEffect(hostActivity, effectiveKeepScreenOn) {
         val window = hostActivity?.window
-        if (keepScreenOn) {
+        if (effectiveKeepScreenOn) {
             window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         } else {
             window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
         onDispose {
             window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        }
-    }
-
-    DisposableEffect(hostActivity, lockMotionOrientation) {
-        val activity = hostActivity
-        val previousOrientation = activity?.requestedOrientation
-        if (lockMotionOrientation) {
-            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LOCKED
-        }
-        onDispose {
-            if (
-                lockMotionOrientation &&
-                activity?.requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_LOCKED
-            ) {
-                activity.requestedOrientation =
-                    previousOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-            }
         }
     }
 
@@ -391,11 +378,36 @@ internal fun FidgetToyPage(
         }
     }
 
+    LaunchedEffect(rewardMomentMessage) {
+        if (rewardMomentMessage != null) {
+            delay(1_700L)
+            rewardMomentMessage = null
+        }
+    }
+
     LaunchedEffect(toyIndex) {
         if (toyIndex == FIDGET_LIQUID_MAZE_INDEX) {
-            liquidMazeWalls = generateLiquidMazeWalls()
-            liquidBlobPosition = liquidMazeStartPosition(liquidMazeWalls)
+            liquidMazePuzzle = generateLiquidMazePuzzle()
+            liquidBlobPosition = liquidMazeStartPosition(liquidMazePuzzle)
             liquidBlobTrail = emptyList()
+        }
+    }
+
+    fun triggerRewardMoment(count: Int) {
+        rewardPulse = 1f
+        touchPulse = 1f
+        when (rewardStyle) {
+            FidgetRewardStyle.Calm -> Unit
+            FidgetRewardStyle.Glow -> rewardFlash = 0.32f
+            FidgetRewardStyle.Celebrate -> {
+                rewardFlash = 1f
+                rewardMomentMessage = positiveRewardMessageFor(count, appLanguage)
+                feedbackController.playReward(
+                    hapticEnabled = hapticFeedbackEnabled,
+                    soundEnabled = soundFeedbackEnabled,
+                    beatSoundMode = feedbackSoundMode,
+                )
+            }
         }
     }
 
@@ -405,8 +417,7 @@ internal fun FidgetToyPage(
             fidgetCount = nextCount
             context.saveFidgetCount(nextCount)
             if (isFibonacciReward(nextCount)) {
-                rewardPulse = 1f
-                touchPulse = 1f
+                triggerRewardMoment(nextCount)
             }
         }
         feedbackController.play(
@@ -422,8 +433,7 @@ internal fun FidgetToyPage(
         fidgetCount = nextCount
         context.saveFidgetCount(nextCount)
         if (isFibonacciReward(nextCount)) {
-            rewardPulse = 1f
-            touchPulse = 1f
+            triggerRewardMoment(nextCount)
         }
         feedbackController.playBeatPad(
             padIndex = index,
@@ -469,7 +479,7 @@ internal fun FidgetToyPage(
                 val nextPosition = moveLiquidMazeBlob(
                     position = liquidBlobPosition,
                     delta = motionDelta,
-                    walls = liquidMazeWalls,
+                    puzzle = liquidMazePuzzle,
                 )
                 if (nextPosition != liquidBlobPosition) {
                     liquidBlobTrail = (liquidBlobTrail + liquidBlobPosition).takeLast(14)
@@ -566,6 +576,7 @@ internal fun FidgetToyPage(
                 soundFeedbackEnabled = soundFeedbackEnabled,
                 feedbackSoundMode = feedbackSoundMode,
                 accentIntensityMode = accentIntensityMode,
+                rewardStyle = rewardStyle,
                 appLanguage = appLanguage,
                 keepScreenOn = keepScreenOn,
                 cpuPercentVisible = cpuPercentVisible,
@@ -679,6 +690,7 @@ internal fun FidgetToyPage(
                     soundFeedbackEnabled = soundFeedbackEnabled,
                     feedbackSoundMode = feedbackSoundMode,
                     accentIntensityMode = accentIntensityMode,
+                    rewardStyle = rewardStyle,
                     appLanguage = appLanguage,
                     keepScreenOn = keepScreenOn,
                     cpuPercentVisible = cpuPercentVisible,
@@ -789,6 +801,7 @@ internal fun FidgetToyPage(
                         worryStoneRub *= 0.965f
                         if (worryStoneRub < 0.01f) {
                             worryStoneRub = 0f
+                            worryStoneTouchPoint = null
                         }
                     }
                     if (zenTracePoints.isNotEmpty()) {
@@ -796,6 +809,7 @@ internal fun FidgetToyPage(
                     }
                     touchPulse *= 0.9f
                     rewardPulse *= 0.94f
+                    rewardFlash = (rewardFlash - 0.035f).coerceAtLeast(0f)
                 }
                 previousFrameNanos = frameNanos
             }
@@ -832,20 +846,20 @@ internal fun FidgetToyPage(
         val navButtonPadding = when {
             phoneLandscape -> 78.dp
             phoneLayout -> 26.dp
-            compactWatch -> 10.dp
-            else -> 12.dp
+            compactWatch -> 16.dp
+            else -> 18.dp
         }
         val bottomContentPadding = when {
             phoneLandscape -> 10.dp
             phoneLayout -> 16.dp
-            else -> 10.dp
+            else -> 18.dp
         }
         val pageHorizontalPadding = if (phoneLandscape) 48.dp else 10.dp
         val pageTopPadding = when {
             phoneLandscape -> 10.dp
             phoneLayout -> 34.dp
-            toyIndex == FIDGET_MENU_INDEX -> 16.dp + wearLargeFontTopExtra
-            else -> 22.dp + wearLargeFontTopExtra
+            toyIndex == FIDGET_MENU_INDEX -> 24.dp + wearLargeFontTopExtra
+            else -> 34.dp + wearLargeFontTopExtra
         }
         val phoneToyScale = when {
             phoneLandscape -> 1.72f
@@ -912,6 +926,7 @@ internal fun FidgetToyPage(
                 rainbowRotationDegrees = rainbowRotationDegrees,
                 touchPulse = touchPulse,
                 rewardPulse = rewardPulse,
+                edgeInset = if (compactWatch) 11.dp else 13.dp,
             )
         }
 
@@ -996,14 +1011,23 @@ internal fun FidgetToyPage(
                 },
                 modifier = Modifier
                     .then(
-                        if (phoneLayout && toyIndex != FIDGET_MENU_INDEX && toyIndex != FIDGET_WALL_INDEX) {
-                            Modifier
-                                .fillMaxWidth(0.94f)
-                                .weight(1f)
-                        } else {
-                            Modifier
-                                .fillMaxWidth()
-                                .weight(1f)
+                        when {
+                            phoneLayout && toyIndex != FIDGET_MENU_INDEX && toyIndex != FIDGET_WALL_INDEX -> {
+                                Modifier
+                                    .fillMaxWidth(0.94f)
+                                    .weight(1f)
+                            }
+                            toyIndex != FIDGET_MENU_INDEX && toyIndex != FIDGET_WALL_INDEX -> {
+                                // Keep every toy stage inside the round-display safe zone.
+                                Modifier
+                                    .fillMaxWidth(0.86f)
+                                    .weight(1f)
+                            }
+                            else -> {
+                                Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f)
+                            }
                         },
                     )
                     .offset {
@@ -1275,12 +1299,12 @@ internal fun FidgetToyPage(
                             LiquidMazeFidgetToy(
                                 blobPosition = liquidBlobPosition,
                                 blobTrail = liquidBlobTrail,
-                                walls = liquidMazeWalls,
+                                puzzle = liquidMazePuzzle,
                                 onMove = { delta ->
                                     val nextPosition = moveLiquidMazeBlob(
                                         position = liquidBlobPosition,
                                         delta = delta,
-                                        walls = liquidMazeWalls,
+                                        puzzle = liquidMazePuzzle,
                                     )
                                     liquidBlobTrail = (liquidBlobTrail + liquidBlobPosition).takeLast(14)
                                     liquidBlobPosition = nextPosition
@@ -1291,8 +1315,8 @@ internal fun FidgetToyPage(
                                 },
                                 onRefresh = {
                                     triggerFeedback()
-                                    liquidMazeWalls = generateLiquidMazeWalls()
-                                    liquidBlobPosition = liquidMazeStartPosition(liquidMazeWalls)
+                                    liquidMazePuzzle = generateLiquidMazePuzzle()
+                                    liquidBlobPosition = liquidMazeStartPosition(liquidMazePuzzle)
                                     liquidBlobTrail = emptyList()
                                 },
                             )
@@ -1312,9 +1336,11 @@ internal fun FidgetToyPage(
                         } else if (toyIndex == FIDGET_WORRY_STONE_INDEX) {
                             WorryStoneFidgetToy(
                                 rub = worryStoneRub,
+                                touchPoint = worryStoneTouchPoint,
                                 accentColor = mainColor,
-                                onRub = { delta ->
-                                    worryStoneRub = (worryStoneRub + delta.vectorLength() / 80f).coerceIn(0f, 1f)
+                                onRub = { position, delta ->
+                                    worryStoneTouchPoint = position
+                                    worryStoneRub = (worryStoneRub + delta.vectorLength() / 38f).coerceIn(0f, 1f)
                                     triggerFeedback()
                                 },
                             )
@@ -1511,6 +1537,7 @@ internal fun FidgetToyPage(
                                 soundFeedbackEnabled = soundFeedbackEnabled,
                                 feedbackSoundMode = feedbackSoundMode,
                                 accentIntensityMode = accentIntensityMode,
+                                rewardStyle = rewardStyle,
                                 keepScreenOn = keepScreenOn,
                                 cpuPercentVisible = cpuPercentVisible,
                                 cpuUsagePercent = cpuUsagePercent,
@@ -1596,6 +1623,10 @@ internal fun FidgetToyPage(
                                 },
                                 onAccentIntensityModeChoice = { mode ->
                                     accentIntensityMode = mode
+                                    triggerFeedback(countFidget = false)
+                                },
+                                onRewardStyleChoice = { style ->
+                                    rewardStyle = style
                                     triggerFeedback(countFidget = false)
                                 },
                                 onMainColorChoice = { colorArgb ->
@@ -1794,6 +1825,10 @@ internal fun FidgetToyPage(
                         rainbow = ringIsRainbow,
                         phoneLayout = phoneLayout,
                         phoneLandscape = phoneLandscape,
+                        onClick = {
+                            rewardProgressPopupOpen = true
+                            triggerFeedback(countFidget = false)
+                        },
                         modifier = if (phoneLandscape) {
                             Modifier
                                 .align(Alignment.BottomEnd)
@@ -1805,6 +1840,40 @@ internal fun FidgetToyPage(
                     )
                 }
             }
+        }
+
+        if (rewardFlash > 0f && rewardStyle != FidgetRewardStyle.Calm) {
+            val flashAlpha = when (rewardStyle) {
+                FidgetRewardStyle.Glow -> rewardFlash * 0.16f
+                FidgetRewardStyle.Celebrate -> {
+                    (0.08f + abs(sin((1f - rewardFlash) * 32f)) * 0.34f) * rewardFlash
+                }
+                FidgetRewardStyle.Calm -> 0f
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.White.copy(alpha = flashAlpha)),
+            )
+        }
+
+        if (rewardMomentMessage != null) {
+            FidgetRewardMomentToast(
+                message = rewardMomentMessage.orEmpty(),
+                ringColor = ringColor,
+                phoneLayout = phoneLayout,
+                phoneLandscape = phoneLandscape,
+            )
+        }
+
+        if (rewardProgressPopupOpen) {
+            FidgetRewardProgressPopup(
+                count = fidgetCount,
+                nextReward = nextRewardCount,
+                appLanguage = appLanguage,
+                ringColor = ringColor,
+                onDismiss = { rewardProgressPopupOpen = false },
+            )
         }
 
         if (reviewPopupOpen) {
@@ -1932,106 +2001,129 @@ private const val FIDGET_MENU_INDEX = 27
 private const val SWITCH_MAZE_COLUMNS = 4
 private const val SWITCH_MAZE_ROWS = 4
 private const val SWITCH_MAZE_CELL_COUNT = SWITCH_MAZE_COLUMNS * SWITCH_MAZE_ROWS
-private const val FIDGET_MAZE_COLUMNS = 5
-private const val FIDGET_MAZE_ROWS = 5
-private const val FIDGET_MAZE_CELL_COUNT = FIDGET_MAZE_COLUMNS * FIDGET_MAZE_ROWS
+internal const val FIDGET_MAZE_COLUMNS = 5
+internal const val FIDGET_MAZE_ROWS = 5
+internal const val FIDGET_MAZE_CELL_COUNT = FIDGET_MAZE_COLUMNS * FIDGET_MAZE_ROWS
+private const val FIDGET_MAZE_RESET_CELL = FIDGET_MAZE_COLUMNS - 1
 
-internal data class LiquidMazeWall(
-    val start: Offset,
-    val end: Offset,
-)
-
-private const val LIQUID_MAZE_BLOB_RADIUS_DP = 11f
-private const val LIQUID_MAZE_WALL_CLEARANCE_DP = 13f
-private const val LIQUID_MAZE_BOARD_LIMIT_DP = 35f
+private const val LIQUID_MAZE_BLOB_RADIUS_DP = 8f
+private const val LIQUID_MAZE_BOARD_LIMIT_DP = 50f
+private const val LIQUID_MAZE_CELL_SIZE_DP = 20f
 private const val LIQUID_MAZE_MAX_STEP_DP = 5f
 
-private fun generateLiquidMazeWalls(): List<LiquidMazeWall> {
-    val layouts = listOf(
-        listOf(
-            LiquidMazeWall(Offset(-34f, -31f), Offset(32f, -31f)),
-            LiquidMazeWall(Offset(-34f, -1f), Offset(17f, -1f)),
-            LiquidMazeWall(Offset(-17f, 27f), Offset(36f, 27f)),
-            LiquidMazeWall(Offset(-17f, -31f), Offset(-17f, -1f)),
-            LiquidMazeWall(Offset(17f, -1f), Offset(17f, 27f)),
-        ),
-        listOf(
-            LiquidMazeWall(Offset(-36f, -24f), Offset(10f, -24f)),
-            LiquidMazeWall(Offset(-10f, 4f), Offset(36f, 4f)),
-            LiquidMazeWall(Offset(-36f, 31f), Offset(8f, 31f)),
-            LiquidMazeWall(Offset(-10f, -24f), Offset(-10f, 4f)),
-            LiquidMazeWall(Offset(10f, 4f), Offset(10f, 31f)),
-        ),
-        listOf(
-            LiquidMazeWall(Offset(-34f, -34f), Offset(-2f, -34f)),
-            LiquidMazeWall(Offset(12f, -10f), Offset(36f, -10f)),
-            LiquidMazeWall(Offset(-36f, 18f), Offset(4f, 18f)),
-            LiquidMazeWall(Offset(-2f, -34f), Offset(-2f, -10f)),
-            LiquidMazeWall(Offset(12f, -10f), Offset(12f, 18f)),
-        ),
-        listOf(
-            LiquidMazeWall(Offset(-36f, -14f), Offset(-8f, -14f)),
-            LiquidMazeWall(Offset(8f, 14f), Offset(36f, 14f)),
-            LiquidMazeWall(Offset(-30f, 36f), Offset(2f, 36f)),
-            LiquidMazeWall(Offset(-8f, -14f), Offset(-8f, 14f)),
-            LiquidMazeWall(Offset(8f, 14f), Offset(8f, 36f)),
-        ),
-    )
-    return layouts.random()
-}
+private fun generateLiquidMazePuzzle(): FidgetMazePuzzle = generateFidgetMazePuzzle()
 
 internal fun moveLiquidMazeBlob(
     position: Offset,
     delta: Offset,
-    walls: List<LiquidMazeWall>,
+    puzzle: FidgetMazePuzzle,
 ): Offset {
     val movement = delta.limitedToLength(LIQUID_MAZE_MAX_STEP_DP)
-    val stepCount = (movement.vectorLength() / 1.5f).toInt().coerceIn(1, 4)
+    val stepCount = (movement.vectorLength() / 1.25f).toInt().coerceIn(1, 5)
     val step = movement * (1f / stepCount)
     var current = position.limitedToBox(LIQUID_MAZE_BOARD_LIMIT_DP, LIQUID_MAZE_BOARD_LIMIT_DP)
 
     repeat(stepCount) {
-        val xCandidate = Offset(current.x + step.x, current.y)
-            .limitedToBox(LIQUID_MAZE_BOARD_LIMIT_DP, LIQUID_MAZE_BOARD_LIMIT_DP)
-        if (!liquidMazeBlocked(xCandidate, walls, LIQUID_MAZE_WALL_CLEARANCE_DP)) {
-            current = xCandidate
+        val candidates = listOf(
+            current + step,
+            Offset(current.x + step.x, current.y),
+            Offset(current.x, current.y + step.y),
+        ).mapNotNull { candidate ->
+            constrainLiquidMazeMove(current, candidate, puzzle)
         }
 
-        val yCandidate = Offset(current.x, current.y + step.y)
-            .limitedToBox(LIQUID_MAZE_BOARD_LIMIT_DP, LIQUID_MAZE_BOARD_LIMIT_DP)
-        if (!liquidMazeBlocked(yCandidate, walls, LIQUID_MAZE_WALL_CLEARANCE_DP)) {
-            current = yCandidate
-        }
+        // A blocked diagonal keeps whichever open passage best matches the pull,
+        // so the liquid naturally glides along a maze wall instead of sticking.
+        current = candidates.maxByOrNull { candidate ->
+            (candidate.x - current.x) * step.x + (candidate.y - current.y) * step.y
+        } ?: current
     }
     return current
 }
 
-internal fun liquidMazeStartPosition(walls: List<LiquidMazeWall>): Offset {
-    val candidates = (-32..32 step 8)
-        .flatMap { y -> (-32..32 step 8).map { x -> Offset(x.toFloat(), y.toFloat()) } }
-        .sortedBy { it.vectorLength() }
-    return candidates.firstOrNull { candidate ->
-        !liquidMazeBlocked(candidate, walls, LIQUID_MAZE_WALL_CLEARANCE_DP)
-    } ?: Offset.Zero
+internal fun liquidMazeStartPosition(puzzle: FidgetMazePuzzle): Offset =
+    liquidMazeCellCenter(puzzle.startCell)
+
+private fun constrainLiquidMazeMove(
+    current: Offset,
+    requested: Offset,
+    puzzle: FidgetMazePuzzle,
+): Offset? {
+    val fromCell = liquidMazeCellAt(current)
+    val bounded = requested.limitedToBox(LIQUID_MAZE_BOARD_LIMIT_DP, LIQUID_MAZE_BOARD_LIMIT_DP)
+    val targetCell = liquidMazeCellAt(bounded)
+    val fromColumn = fromCell % FIDGET_MAZE_COLUMNS
+    val fromRow = fromCell / FIDGET_MAZE_COLUMNS
+    val targetColumn = targetCell % FIDGET_MAZE_COLUMNS
+    val targetRow = targetCell / FIDGET_MAZE_COLUMNS
+
+    if (fromCell == targetCell) {
+        return liquidMazeKeepInsideClosedWalls(bounded, fromCell, puzzle)
+    }
+    if (abs(targetColumn - fromColumn) + abs(targetRow - fromRow) != 1) return null
+
+    val direction = when {
+        targetColumn > fromColumn -> MazeDirection.Right
+        targetColumn < fromColumn -> MazeDirection.Left
+        targetRow > fromRow -> MazeDirection.Down
+        else -> MazeDirection.Up
+    }
+    if (!liquidMazeCellHasOpening(puzzle, fromCell, direction)) return null
+    return liquidMazeKeepInsideClosedWalls(bounded, targetCell, puzzle)
 }
 
-private fun liquidMazeBlocked(
-    point: Offset,
-    walls: List<LiquidMazeWall>,
-    radius: Float,
-): Boolean = walls.any { wall ->
-    if (abs(wall.start.y - wall.end.y) < 0.1f) {
-        point.x in (minOf(wall.start.x, wall.end.x) - radius)..(maxOf(wall.start.x, wall.end.x) + radius) &&
-            abs(point.y - wall.start.y) <= radius
-    } else {
-        point.y in (minOf(wall.start.y, wall.end.y) - radius)..(maxOf(wall.start.y, wall.end.y) + radius) &&
-            abs(point.x - wall.start.x) <= radius
-    }
+private fun liquidMazeKeepInsideClosedWalls(
+    position: Offset,
+    cell: Int,
+    puzzle: FidgetMazePuzzle,
+): Offset {
+    val column = cell % FIDGET_MAZE_COLUMNS
+    val row = cell / FIDGET_MAZE_COLUMNS
+    val left = -LIQUID_MAZE_BOARD_LIMIT_DP + column * LIQUID_MAZE_CELL_SIZE_DP
+    val top = -LIQUID_MAZE_BOARD_LIMIT_DP + row * LIQUID_MAZE_CELL_SIZE_DP
+    val right = left + LIQUID_MAZE_CELL_SIZE_DP
+    val bottom = top + LIQUID_MAZE_CELL_SIZE_DP
+    val openings = puzzle.openings.getOrElse(cell) { 0 }
+    val minimumX = if (openings and MAZE_OPEN_LEFT == 0) left + LIQUID_MAZE_BLOB_RADIUS_DP else left
+    val maximumX = if (openings and MAZE_OPEN_RIGHT == 0) right - LIQUID_MAZE_BLOB_RADIUS_DP else right
+    val minimumY = if (openings and MAZE_OPEN_UP == 0) top + LIQUID_MAZE_BLOB_RADIUS_DP else top
+    val maximumY = if (openings and MAZE_OPEN_DOWN == 0) bottom - LIQUID_MAZE_BLOB_RADIUS_DP else bottom
+    return Offset(
+        x = position.x.coerceIn(minimumX, maximumX),
+        y = position.y.coerceIn(minimumY, maximumY),
+    )
 }
-private const val MAZE_OPEN_UP = 1
-private const val MAZE_OPEN_RIGHT = 2
-private const val MAZE_OPEN_DOWN = 4
-private const val MAZE_OPEN_LEFT = 8
+
+private fun liquidMazeCellHasOpening(
+    puzzle: FidgetMazePuzzle,
+    cell: Int,
+    direction: MazeDirection,
+): Boolean =
+    cell != FIDGET_MAZE_RESET_CELL &&
+        puzzle.openings.getOrElse(cell) { 0 } and direction.openMask() != 0
+
+private fun liquidMazeCellAt(position: Offset): Int {
+    val column = ((position.x + LIQUID_MAZE_BOARD_LIMIT_DP) / LIQUID_MAZE_CELL_SIZE_DP)
+        .toInt()
+        .coerceIn(0, FIDGET_MAZE_COLUMNS - 1)
+    val row = ((position.y + LIQUID_MAZE_BOARD_LIMIT_DP) / LIQUID_MAZE_CELL_SIZE_DP)
+        .toInt()
+        .coerceIn(0, FIDGET_MAZE_ROWS - 1)
+    return row * FIDGET_MAZE_COLUMNS + column
+}
+
+private fun liquidMazeCellCenter(cell: Int): Offset {
+    val column = cell % FIDGET_MAZE_COLUMNS
+    val row = cell / FIDGET_MAZE_COLUMNS
+    return Offset(
+        x = -LIQUID_MAZE_BOARD_LIMIT_DP + (column + 0.5f) * LIQUID_MAZE_CELL_SIZE_DP,
+        y = -LIQUID_MAZE_BOARD_LIMIT_DP + (row + 0.5f) * LIQUID_MAZE_CELL_SIZE_DP,
+    )
+}
+internal const val MAZE_OPEN_UP = 1
+internal const val MAZE_OPEN_RIGHT = 2
+internal const val MAZE_OPEN_DOWN = 4
+internal const val MAZE_OPEN_LEFT = 8
 private const val SLINGSHOT_PULL_LIMIT_DP = 42f
 private const val SLINGSHOT_BOUNCE_LIMIT_DP = 47f
 private const val SLINGSHOT_LAUNCH_MULTIPLIER = 16f
@@ -2058,6 +2150,7 @@ internal const val FIDGET_HAPTIC_ENABLED_KEY = "haptic_enabled"
 private const val FIDGET_SOUND_ENABLED_KEY = "sound_enabled"
 private const val FIDGET_SOUND_MODE_KEY = "sound_mode"
 private const val FIDGET_ACCENT_INTENSITY_KEY = "accent_intensity"
+private const val FIDGET_REWARD_STYLE_KEY = "reward_style"
 internal const val FIDGET_LANGUAGE_KEY = "language"
 private const val FIDGET_KEEP_SCREEN_ON_KEY = "keep_screen_on"
 private const val FIDGET_CPU_VISIBLE_KEY = "cpu_visible"
@@ -2073,20 +2166,12 @@ private const val FIDGET_NEUTRAL_TILT_X_KEY = "neutral_tilt_x"
 private const val FIDGET_NEUTRAL_TILT_Y_KEY = "neutral_tilt_y"
 private const val FIDGET_DONATION_COUNT_PREFIX = "donation_count_"
 
-internal fun shouldLockFidgetMotionOrientation(
+internal fun shouldKeepFidgetScreenOn(
+    manualKeepScreenOn: Boolean,
+    wearEdition: Boolean,
     motionInputEnabled: Boolean,
-    tiltGestureEnabled: Boolean,
-    toyIndex: Int,
 ): Boolean {
-    if (!motionInputEnabled || !tiltGestureEnabled) return false
-    return when (toyIndex) {
-        FIDGET_MAZE_INDEX,
-        FIDGET_LIQUID_MAZE_INDEX,
-        FIDGET_CENTER_DROP_MAZE_INDEX,
-        FIDGET_BALL_SORT_MAZE_INDEX,
-        -> true
-        else -> false
-    }
+    return manualKeepScreenOn || (wearEdition && motionInputEnabled)
 }
 
 internal data class FidgetToyInfo(
@@ -2118,14 +2203,14 @@ private data class FidgetDonationBadge(
     val colorArgb: Int,
 )
 
-private enum class MazeDirection {
+internal enum class MazeDirection {
     Up,
     Right,
     Down,
     Left,
 }
 
-private data class FidgetMazePuzzle(
+internal data class FidgetMazePuzzle(
     val openings: List<Int>,
     val startCell: Int,
     val endCell: Int,
@@ -2134,7 +2219,7 @@ private data class FidgetMazePuzzle(
         val column = currentCell % FIDGET_MAZE_COLUMNS
         val row = currentCell / FIDGET_MAZE_COLUMNS
         val openMask = openings.getOrElse(currentCell) { 0 }
-        return when (direction) {
+        val nextCell = when (direction) {
             MazeDirection.Up -> if (row > 0 && openMask and MAZE_OPEN_UP != 0) {
                 currentCell - FIDGET_MAZE_COLUMNS
             } else {
@@ -2156,6 +2241,7 @@ private data class FidgetMazePuzzle(
                 currentCell
             }
         }
+        return nextCell.takeUnless { it == FIDGET_MAZE_RESET_CELL } ?: currentCell
     }
 }
 
@@ -2171,6 +2257,7 @@ private data class FidgetSettingsState(
     val soundFeedbackEnabled: Boolean,
     val feedbackSoundMode: BeatSoundMode,
     val accentIntensityMode: AccentIntensityMode,
+    val rewardStyle: FidgetRewardStyle,
     val appLanguage: AppLanguage,
     val keepScreenOn: Boolean,
     val cpuPercentVisible: Boolean,
@@ -2304,7 +2391,11 @@ internal fun fidgetTextFor(language: AppLanguage): FidgetText {
             pinned = "Pinned",
             soon = "Soon",
             rewardLine = { count, nextReward ->
-                "${formatFidgetCount(count)}  |  ${formatFidgetCount(nextReward)} reward"
+                when {
+                    count < 1_000 -> "${formatFidgetCount(count)} taps | ${formatFidgetCount(nextReward)} reward"
+                    count < 10_000 -> "${formatFidgetCount(count)} | ${formatFidgetCount(nextReward)}"
+                    else -> "${formatFidgetCount(count)} taps"
+                }
             },
             links = "Links",
             review = "Review",
@@ -2383,7 +2474,11 @@ internal fun fidgetTextFor(language: AppLanguage): FidgetText {
             pinned = "Fijado",
             soon = "Pronto",
             rewardLine = { count, nextReward ->
-                "${formatFidgetCount(count)}  |  premio en ${formatFidgetCount(nextReward)}"
+                when {
+                    count < 1_000 -> "${formatFidgetCount(count)} toques | ${formatFidgetCount(nextReward)} premio"
+                    count < 10_000 -> "${formatFidgetCount(count)} | ${formatFidgetCount(nextReward)}"
+                    else -> "${formatFidgetCount(count)} toques"
+                }
             },
             links = "Enlaces",
             review = "Reseña",
@@ -2497,10 +2592,16 @@ private fun FidgetTitleBar(
 ) {
     val systemFontScale = LocalDensity.current.fontScale
     val largeFontHeightExtra = ((systemFontScale - 1f).coerceIn(0f, 0.5f) * 16f).dp
+    val titleColor = if (phoneLayout) {
+        MaterialTheme.colorScheme.onBackground
+    } else {
+        Color.White
+    }
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
             .fillMaxWidth()
+            .zIndex(3f)
             .height(
                 when {
                     phoneLandscape -> 36.dp + largeFontHeightExtra
@@ -2524,7 +2625,7 @@ private fun FidgetTitleBar(
             )
             Text(
                 text = title,
-                color = MaterialTheme.colorScheme.onBackground,
+                color = titleColor,
                 fontSize = if (phoneLayout) 16.sp else 12.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
@@ -2625,6 +2726,7 @@ private fun FidgetMenuPage(
     soundFeedbackEnabled: Boolean,
     feedbackSoundMode: BeatSoundMode,
     accentIntensityMode: AccentIntensityMode,
+    rewardStyle: FidgetRewardStyle,
     keepScreenOn: Boolean,
     cpuPercentVisible: Boolean,
     cpuUsagePercent: Float?,
@@ -2656,6 +2758,7 @@ private fun FidgetMenuPage(
     onCpuToggle: () -> Unit,
     onLanguageChoice: (AppLanguage) -> Unit,
     onAccentIntensityModeChoice: (AccentIntensityMode) -> Unit,
+    onRewardStyleChoice: (FidgetRewardStyle) -> Unit,
     onMainColorChoice: (Int) -> Unit,
     onBackgroundColorChoice: (Int) -> Unit,
     onRingColorChoice: (Int) -> Unit,
@@ -3148,6 +3251,22 @@ private fun FidgetMenuPage(
             Spacer(modifier = Modifier.height(sectionSpacing))
 
             FidgetMenuSectionTitle(text.rewards, labelFontSize, accentColor = accentColor)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(top = tightSpacing),
+            ) {
+                FidgetRewardStyle.entries.forEach { style ->
+                    FidgetMiniChoiceButton(
+                        text = style.labelFor(appLanguage),
+                        selected = rewardStyle == style,
+                        accentColor = accentColor,
+                        accentColorArgb = mainColorArgb,
+                        phoneLayout = phoneLayout,
+                        onClick = { onRewardStyleChoice(style) },
+                    )
+                }
+            }
             FidgetSettingsButton(
                 text = text.resetRewards,
                 selected = false,
@@ -3192,7 +3311,7 @@ private fun FidgetMenuPage(
                 accentColor = accentColor,
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .padding(end = if (phoneLayout) 8.dp else 5.dp)
+                    .padding(end = if (phoneLayout) 8.dp else 20.dp)
                     .width(if (phoneLayout) 6.dp else 4.dp)
                     .height(scrollBarHeight),
                 )
@@ -3355,6 +3474,224 @@ private fun Boolean.thenCpuLabel(cpuUsagePercent: Float?): String {
         cpuUsagePercent.formatFidgetCpuPercent()
     } else {
         "--%"
+    }
+}
+
+@Composable
+private fun FidgetRewardProgressPopup(
+    count: Int,
+    nextReward: Int,
+    appLanguage: AppLanguage,
+    ringColor: Color,
+    onDismiss: () -> Unit,
+) {
+    var fibonacciInfoOpen by rememberSaveable { mutableStateOf(false) }
+    BackHandler {
+        if (fibonacciInfoOpen) {
+            fibonacciInfoOpen = false
+        } else {
+            onDismiss()
+        }
+    }
+    val previousReward = previousFibonacciTarget(count)
+    val progress = if (nextReward <= previousReward) 1f else {
+        ((count - previousReward).toFloat() / (nextReward - previousReward).toFloat()).coerceIn(0f, 1f)
+    }
+    val (title, tapsLabel, nextLabel) = when (appLanguage) {
+        AppLanguage.English -> Triple("REWARD PATH", "Taps", "Next")
+        AppLanguage.Spanish -> Triple("RUTA DE PREMIOS", "Toques", "Siguiente")
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .zIndex(20f)
+            .background(Color.Black.copy(alpha = 0.86f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .width(170.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(Color(0xFF061112))
+                .border(1.dp, ringColor.copy(alpha = 0.76f), RoundedCornerShape(14.dp))
+                .padding(horizontal = 12.dp, vertical = 12.dp),
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(title, color = ringColor, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                Text(
+                    text = "${formatFidgetCount(count)} $tapsLabel",
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Black,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+                Text(
+                    text = "$nextLabel ${formatFidgetCount(nextReward)}",
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.72f),
+                    fontSize = 10.sp,
+                    modifier = Modifier.padding(top = 3.dp),
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(7.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.14f)),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(progress)
+                            .clip(CircleShape)
+                            .background(ringColor),
+                    )
+                }
+                Text(
+                    text = "${(progress * 100f).roundToInt()}%",
+                    color = ringColor,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 5.dp),
+                )
+                FidgetMenuChoiceButton(
+                    text = if (appLanguage == AppLanguage.English) "Done" else "Listo",
+                    selected = false,
+                    onClick = onDismiss,
+                )
+            }
+            FidgetFibonacciInfoButton(
+                ringColor = ringColor,
+                onClick = { fibonacciInfoOpen = true },
+                modifier = Modifier.align(Alignment.TopStart),
+            )
+        }
+
+        if (fibonacciInfoOpen) {
+            FidgetFibonacciInfoPopup(
+                appLanguage = appLanguage,
+                ringColor = ringColor,
+                onDismiss = { fibonacciInfoOpen = false },
+            )
+        }
+    }
+}
+
+@Composable
+private fun FidgetFibonacciInfoButton(
+    ringColor: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .size(20.dp)
+            .clip(CircleShape)
+            .background(ringColor.copy(alpha = 0.18f))
+            .border(1.dp, ringColor.copy(alpha = 0.8f), CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = "i",
+            color = ringColor,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Black,
+        )
+    }
+}
+
+@Composable
+private fun FidgetFibonacciInfoPopup(
+    appLanguage: AppLanguage,
+    ringColor: Color,
+    onDismiss: () -> Unit,
+) {
+    val (title, description, closeLabel) = when (appLanguage) {
+        AppLanguage.English -> Triple(
+            "FIBONACCI REWARDS",
+            "Each number is made from the two before it: 1, 2, 3, 5, 8, 13... Reach a milestone to trigger a reward moment.",
+            "Got it",
+        )
+        AppLanguage.Spanish -> Triple(
+            "RECOMPENSAS FIBONACCI",
+            "Cada número se forma con los dos anteriores: 1, 2, 3, 5, 8, 13... Llega a una meta para activar una recompensa.",
+            "OK",
+        )
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.42f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .width(150.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color(0xFF0A191A))
+                .border(1.dp, ringColor.copy(alpha = 0.85f), RoundedCornerShape(12.dp))
+                .padding(horizontal = 12.dp, vertical = 12.dp),
+        ) {
+            Text(
+                text = title,
+                color = ringColor,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Black,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = description,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.86f),
+                fontSize = 9.sp,
+                textAlign = TextAlign.Center,
+                lineHeight = 12.sp,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+            FidgetMenuChoiceButton(
+                text = closeLabel,
+                selected = false,
+                onClick = onDismiss,
+            )
+        }
+    }
+}
+
+@Composable
+private fun FidgetRewardMomentToast(
+    message: String,
+    ringColor: Color,
+    phoneLayout: Boolean,
+    phoneLandscape: Boolean,
+) {
+    val rewardOffset = when {
+        !phoneLayout -> 0.dp
+        phoneLandscape -> (-34).dp
+        else -> (-78).dp
+    }
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = message,
+            color = Color.White,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Black,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .width(156.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(Color.Black.copy(alpha = 0.82f))
+                .border(1.dp, ringColor.copy(alpha = 0.86f), RoundedCornerShape(14.dp))
+                .offset(y = rewardOffset)
+                .padding(horizontal = 12.dp, vertical = 11.dp),
+        )
     }
 }
 
@@ -4001,6 +4338,9 @@ private fun Context.loadFidgetSettings(): FidgetSettingsState {
         accentIntensityMode = AccentIntensityMode.fromPersistedValue(
             preferences.getInt(FIDGET_ACCENT_INTENSITY_KEY, AccentIntensityMode.Big.persistedValue),
         ),
+        rewardStyle = FidgetRewardStyle.fromPersistedValue(
+            preferences.getInt(FIDGET_REWARD_STYLE_KEY, FidgetRewardStyle.Glow.persistedValue),
+        ),
         appLanguage = AppLanguages.getOrElse(languageIndex) { AppLanguage.English },
         keepScreenOn = preferences.getBoolean(FIDGET_KEEP_SCREEN_ON_KEY, false),
         cpuPercentVisible = preferences.getBoolean(FIDGET_CPU_VISIBLE_KEY, false),
@@ -4036,6 +4376,7 @@ private fun Context.saveFidgetSettings(settings: FidgetSettingsState) {
         putBoolean(FIDGET_SOUND_ENABLED_KEY, settings.soundFeedbackEnabled)
         putInt(FIDGET_SOUND_MODE_KEY, settings.feedbackSoundMode.persistedValue)
         putInt(FIDGET_ACCENT_INTENSITY_KEY, settings.accentIntensityMode.persistedValue)
+        putInt(FIDGET_REWARD_STYLE_KEY, settings.rewardStyle.persistedValue)
         putInt(FIDGET_LANGUAGE_KEY, AppLanguages.indexOf(settings.appLanguage).coerceAtLeast(0))
         putBoolean(FIDGET_KEEP_SCREEN_ON_KEY, settings.keepScreenOn)
         putBoolean(FIDGET_CPU_VISIBLE_KEY, settings.cpuPercentVisible)
@@ -4154,10 +4495,13 @@ private fun randomOpenWhackPosition(
     return choices[Random.nextInt(choices.size)]
 }
 
-private fun generateFidgetMazePuzzle(): FidgetMazePuzzle {
+internal fun generateFidgetMazePuzzle(): FidgetMazePuzzle {
     val openings = MutableList(FIDGET_MAZE_CELL_COUNT) { 0 }
     val visited = BooleanArray(FIDGET_MAZE_CELL_COUNT)
-    val stack = mutableListOf(Random.nextInt(FIDGET_MAZE_CELL_COUNT))
+    val playableCells = (0 until FIDGET_MAZE_CELL_COUNT)
+        .filterNot { it == FIDGET_MAZE_RESET_CELL }
+    val stack = mutableListOf(playableCells[Random.nextInt(playableCells.size)])
+    visited[FIDGET_MAZE_RESET_CELL] = true
     visited[stack.last()] = true
 
     while (stack.isNotEmpty()) {
@@ -4169,7 +4513,7 @@ private fun generateFidgetMazePuzzle(): FidgetMazePuzzle {
             if (column < FIDGET_MAZE_COLUMNS - 1) add(MazeDirection.Right to currentCell + 1)
             if (row < FIDGET_MAZE_ROWS - 1) add(MazeDirection.Down to currentCell + FIDGET_MAZE_COLUMNS)
             if (column > 0) add(MazeDirection.Left to currentCell - 1)
-        }.filter { (_, nextCell) -> !visited[nextCell] }
+        }.filter { (_, nextCell) -> nextCell != FIDGET_MAZE_RESET_CELL && !visited[nextCell] }
 
         if (neighbors.isEmpty()) {
             stack.removeAt(stack.lastIndex)
@@ -4182,10 +4526,10 @@ private fun generateFidgetMazePuzzle(): FidgetMazePuzzle {
         }
     }
 
-    val startCell = Random.nextInt(FIDGET_MAZE_CELL_COUNT)
-    var endCell = Random.nextInt(FIDGET_MAZE_CELL_COUNT)
+    val startCell = playableCells[Random.nextInt(playableCells.size)]
+    var endCell = playableCells[Random.nextInt(playableCells.size)]
     while (endCell == startCell) {
-        endCell = Random.nextInt(FIDGET_MAZE_CELL_COUNT)
+        endCell = playableCells[Random.nextInt(playableCells.size)]
     }
     return FidgetMazePuzzle(
         openings = openings,
@@ -4222,17 +4566,12 @@ private fun Offset.toMazeDirection(): MazeDirection? {
 }
 
 internal fun formatFidgetCount(value: Int): String {
-    if (value < 1_000) return value.toString()
+    if (value < 1_000_000) return value.toString().reversed().chunked(3).joinToString(",").reversed()
 
-    val (unit, suffix) = if (value >= 1_000_000) {
-        1_000_000 to "M"
-    } else {
-        1_000 to "K"
-    }
-    val tenths = value.toLong() * 10L / unit
+    val tenths = value.toLong() * 10L / 1_000_000L
     val whole = tenths / 10L
     val decimal = tenths % 10L
-    return if (decimal == 0L) "$whole$suffix" else "$whole.$decimal$suffix"
+    return if (decimal == 0L) "${whole}M" else "${whole}.${decimal}M"
 }
 
 private fun isFibonacciReward(count: Int): Boolean {
@@ -4257,6 +4596,26 @@ private fun nextFibonacciTarget(count: Int): Int {
         current = next
     }
     return current
+}
+
+private fun previousFibonacciTarget(count: Int): Int {
+    if (count < 1) return 0
+    var previous = 0
+    var current = 1
+    while (current <= count) {
+        val next = previous + current
+        previous = current
+        current = next
+    }
+    return previous
+}
+
+private fun positiveRewardMessageFor(count: Int, language: AppLanguage): String {
+    val messages = when (language) {
+        AppLanguage.English -> listOf("Keep going", "Nice rhythm", "You got this", "Momentum made")
+        AppLanguage.Spanish -> listOf("Sigue asi", "Buen ritmo", "Tu puedes", "Buen impulso")
+    }
+    return messages[count % messages.size]
 }
 
 @Composable
@@ -4446,6 +4805,7 @@ private fun FidgetSelectionWallPage(
             accentColor = accentColor,
             modifier = Modifier
                 .align(Alignment.CenterEnd)
+                .padding(end = if (wallPhoneLayout) 0.dp else 12.dp)
                 .width(4.dp)
                 .height(88.dp),
         )
@@ -4630,9 +4990,10 @@ private fun FidgetOuterRing(
     rainbowRotationDegrees: Float,
     touchPulse: Float,
     rewardPulse: Float,
+    edgeInset: Dp,
 ) {
     Canvas(modifier = Modifier.fillMaxSize()) {
-        val inset = 3.dp.toPx()
+        val inset = edgeInset.toPx()
         val radius = (size.minDimension / 2f - inset).coerceAtLeast(0f)
         val alpha = (0.34f + touchPulse * 0.10f + rewardPulse * 0.24f).coerceIn(0f, 0.72f)
         drawFidgetThemeRing(
@@ -5647,7 +6008,7 @@ private fun RatchetRingFidgetToy(
 private fun LiquidMazeFidgetToy(
     blobPosition: Offset,
     blobTrail: List<Offset>,
-    walls: List<LiquidMazeWall>,
+    puzzle: FidgetMazePuzzle,
     onMove: (Offset) -> Unit,
     onRelease: () -> Unit,
     onRefresh: () -> Unit,
@@ -5662,49 +6023,101 @@ private fun LiquidMazeFidgetToy(
             }
         }
     }
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .size(118.dp)
             .background(Color.White.copy(alpha = 0.06f), boardShape)
-            .border(1.dp, Color(0xFF56F1C8).copy(alpha = 0.72f), boardShape)
-            .pointerInput(Unit) {
-                detectDragGestures(
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        onMove(with(density) { Offset(dragAmount.x.toDp().value, dragAmount.y.toDp().value) })
-                    },
-                    onDragEnd = onRelease,
-                    onDragCancel = onRelease,
-                )
-            },
+            .border(1.dp, Color(0xFF56F1C8).copy(alpha = 0.72f), boardShape),
         contentAlignment = Alignment.Center,
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
+        val boardSide = minOf(maxWidth, maxHeight)
+        val touchScale = (boardSide.value / 118f).coerceAtLeast(0.1f)
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(modifier = Modifier.size(boardSide)) {
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(puzzle) {
+                    detectDragGestures(
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            onMove(
+                                with(density) {
+                                    Offset(
+                                        dragAmount.x.toDp().value / touchScale,
+                                        dragAmount.y.toDp().value / touchScale,
+                                    )
+                                },
+                            )
+                        },
+                        onDragEnd = onRelease,
+                        onDragCancel = onRelease,
+                    )
+                    },
+            ) {
+            val coordinateScale = size.minDimension / 118.dp.toPx()
+            fun scaledDp(value: Float): Float = value.dp.toPx() * coordinateScale
+            fun scaledOffset(x: Float, y: Float): Offset = Offset(scaledDp(x), scaledDp(y))
             val center = Offset(size.width / 2f, size.height / 2f)
+            val boardPadding = size.minDimension * (9f / 118f)
+            val cellSize = (size.minDimension - boardPadding * 2f) / FIDGET_MAZE_COLUMNS
             val wallColor = Color(0xFF56F1C8).copy(alpha = 0.42f)
-            walls.forEach { wall ->
-                drawLine(
-                    color = wallColor,
-                    start = center + Offset(wall.start.x.dp.toPx(), wall.start.y.dp.toPx()),
-                    end = center + Offset(wall.end.x.dp.toPx(), wall.end.y.dp.toPx()),
-                    strokeWidth = 3.dp.toPx(),
-                )
+            val resetLeft = boardPadding + FIDGET_MAZE_RESET_CELL % FIDGET_MAZE_COLUMNS * cellSize
+            drawRoundRect(
+                color = Color.Black.copy(alpha = 0.34f),
+                topLeft = Offset(resetLeft, boardPadding),
+                size = Size(cellSize, cellSize),
+                cornerRadius = CornerRadius(4.dp.toPx()),
+            )
+            puzzle.openings.forEachIndexed { cellIndex, openMask ->
+                val column = cellIndex % FIDGET_MAZE_COLUMNS
+                val row = cellIndex / FIDGET_MAZE_COLUMNS
+                val left = boardPadding + column * cellSize
+                val top = boardPadding + row * cellSize
+                val right = left + cellSize
+                val bottom = top + cellSize
+                val wallWidth = 2.dp.toPx()
+
+                if (openMask and MAZE_OPEN_UP == 0) {
+                    drawLine(wallColor, Offset(left, top), Offset(right, top), wallWidth)
+                }
+                if (openMask and MAZE_OPEN_RIGHT == 0) {
+                    drawLine(wallColor, Offset(right, top), Offset(right, bottom), wallWidth)
+                }
+                if (openMask and MAZE_OPEN_DOWN == 0) {
+                    drawLine(wallColor, Offset(left, bottom), Offset(right, bottom), wallWidth)
+                }
+                if (openMask and MAZE_OPEN_LEFT == 0) {
+                    drawLine(wallColor, Offset(left, top), Offset(left, bottom), wallWidth)
+                }
             }
-            val blobCenter = center + Offset(blobPosition.x.dp.toPx(), blobPosition.y.dp.toPx())
+            // Map the physics board directly into the measured grid. On small watches this
+            // keeps the visual walls, the droplet, and the touch travel area in one space.
+            fun boardPoint(point: Offset): Offset = Offset(
+                x = boardPadding + ((point.x + LIQUID_MAZE_BOARD_LIMIT_DP) /
+                    (LIQUID_MAZE_BOARD_LIMIT_DP * 2f)) * (cellSize * FIDGET_MAZE_COLUMNS),
+                y = boardPadding + ((point.y + LIQUID_MAZE_BOARD_LIMIT_DP) /
+                    (LIQUID_MAZE_BOARD_LIMIT_DP * 2f)) * (cellSize * FIDGET_MAZE_ROWS),
+            )
+
+            val blobCenter = boardPoint(blobPosition)
             blobTrail.forEachIndexed { index, point ->
                 val age = (index + 1f) / (blobTrail.size + 1f)
                 drawCircle(
                     color = Color(0xFF56F1C8).copy(alpha = 0.18f * age),
-                    radius = (6f + age * 7f).dp.toPx(),
-                    center = center + Offset(point.x.dp.toPx(), point.y.dp.toPx()),
+                    radius = scaledDp(6f + age * 7f),
+                    center = boardPoint(point),
                 )
             }
             val wobble = sin(waterPhase * 4.2f) * 2.2f
             drawCircle(
                 color = Color(0xFF56F1C8).copy(alpha = 0.22f),
-                radius = (LIQUID_MAZE_BLOB_RADIUS_DP + 7f + sin(waterPhase * 2.4f) * 2f).dp.toPx(),
+                radius = scaledDp(LIQUID_MAZE_BLOB_RADIUS_DP + 7f + sin(waterPhase * 2.4f) * 2f),
                 center = blobCenter,
-                style = Stroke(width = 1.5.dp.toPx()),
+                style = Stroke(width = scaledDp(1.5f)),
             )
             drawOval(
                 brush = Brush.radialGradient(
@@ -5713,19 +6126,21 @@ private fun LiquidMazeFidgetToy(
                         Color(0xFF56F1C8).copy(alpha = 0.9f),
                         Color(0xFF147D9B).copy(alpha = 0.78f),
                     ),
-                    center = blobCenter + Offset(-3.dp.toPx(), -4.dp.toPx()),
-                    radius = 18.dp.toPx(),
+                    center = blobCenter + scaledOffset(-3f, -4f),
+                    radius = scaledDp(15f),
                 ),
-                topLeft = blobCenter + Offset((-LIQUID_MAZE_BLOB_RADIUS_DP + wobble).dp.toPx(), (-10f).dp.toPx()),
-                size = Size((LIQUID_MAZE_BLOB_RADIUS_DP * 2f).dp.toPx(), 19.dp.toPx()),
+                topLeft = blobCenter + scaledOffset(-LIQUID_MAZE_BLOB_RADIUS_DP + wobble, -8f),
+                size = Size(scaledDp(LIQUID_MAZE_BLOB_RADIUS_DP * 2f), scaledDp(16f)),
             )
-            drawCircle(Color.White.copy(alpha = 0.72f), 3.dp.toPx(), blobCenter + Offset(-4.dp.toPx(), -5.dp.toPx()))
+            drawCircle(
+                Color.White.copy(alpha = 0.72f),
+                scaledDp(3f),
+                blobCenter + scaledOffset(-4f, -5f),
+            )
         }
-        FidgetCornerResetButton(
-            accentColor = Color(0xFF56F1C8),
-            accentColorArgb = NEON_GREEN_COLOR,
-            onClick = onRefresh,
-        )
+            FidgetMazeResetButton(boardSide = boardSide, onClick = onRefresh)
+            }
+        }
     }
 }
 
@@ -5947,8 +6362,9 @@ private fun GearShape(
 @Composable
 private fun WorryStoneFidgetToy(
     rub: Float,
+    touchPoint: Offset?,
     accentColor: Color,
-    onRub: (Offset) -> Unit,
+    onRub: (Offset, Offset) -> Unit,
 ) {
     Box(
         modifier = Modifier
@@ -5958,9 +6374,12 @@ private fun WorryStoneFidgetToy(
             .border(1.dp, accentColor.copy(alpha = 0.72f), RoundedCornerShape(16.dp))
             .pointerInput(Unit) {
                 detectDragGestures(
+                    onDragStart = { position ->
+                        onRub(position, Offset.Zero)
+                    },
                     onDrag = { change, dragAmount ->
                         change.consume()
-                        onRub(dragAmount)
+                        onRub(change.position, dragAmount)
                     },
                 )
             },
@@ -5968,6 +6387,12 @@ private fun WorryStoneFidgetToy(
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val center = Offset(size.width / 2f, size.height / 2f)
+            val contactCenter = (touchPoint ?: center).let { point ->
+                Offset(
+                    x = point.x.coerceIn(16.dp.toPx(), size.width - 16.dp.toPx()),
+                    y = point.y.coerceIn(16.dp.toPx(), size.height - 16.dp.toPx()),
+                )
+            }
             drawOval(
                 brush = Brush.radialGradient(
                     listOf(
@@ -5982,9 +6407,9 @@ private fun WorryStoneFidgetToy(
                 size = Size(86.dp.toPx(), 68.dp.toPx()),
             )
             drawCircle(
-                color = Color.Black.copy(alpha = 0.16f),
-                radius = 16.dp.toPx() + rub * 6.dp.toPx(),
-                center = center + Offset(8.dp.toPx(), 4.dp.toPx()),
+                color = Color.Black.copy(alpha = 0.10f + rub * 0.30f),
+                radius = 12.dp.toPx() + rub * 10.dp.toPx(),
+                center = contactCenter,
                 style = Stroke(width = 3.dp.toPx()),
             )
         }
@@ -6394,9 +6819,9 @@ private fun MazeFidgetToy(
     onRefresh: () -> Unit,
 ) {
     val boardShape = RoundedCornerShape(16.dp)
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
-            .size(126.dp)
+            .size(118.dp)
             .background(Color.White.copy(alpha = 0.06f), boardShape)
             .border(1.dp, Color(0xFF56F1C8).copy(alpha = 0.72f), boardShape)
             .pointerInput(puzzle) {
@@ -6420,9 +6845,17 @@ private fun MazeFidgetToy(
             },
         contentAlignment = Alignment.Center,
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val boardPadding = 11.dp.toPx()
+        val boardSide = minOf(maxWidth, maxHeight)
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(modifier = Modifier.size(boardSide)) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+            val boardScale = size.minDimension / 118.dp.toPx()
+            val boardPadding = size.minDimension * (9f / 118f)
             val cellSize = (size.minDimension - boardPadding * 2f) / FIDGET_MAZE_COLUMNS
+            val markerRadius = cellSize
             val startColumn = puzzle.startCell % FIDGET_MAZE_COLUMNS
             val startRow = puzzle.startCell / FIDGET_MAZE_COLUMNS
             val endColumn = puzzle.endCell % FIDGET_MAZE_COLUMNS
@@ -6437,16 +6870,25 @@ private fun MazeFidgetToy(
                 )
             }
 
+            val resetColumn = FIDGET_MAZE_RESET_CELL % FIDGET_MAZE_COLUMNS
+            val resetLeft = boardPadding + resetColumn * cellSize
+            drawRoundRect(
+                color = Color.Black.copy(alpha = 0.34f),
+                topLeft = Offset(resetLeft, boardPadding),
+                size = Size(cellSize, cellSize),
+                cornerRadius = CornerRadius(4.dp.toPx() * boardScale),
+            )
+
             drawCircle(
                 color = Color(0xFF56F1C8).copy(alpha = 0.58f),
-                radius = cellSize * 0.24f,
+                radius = markerRadius * 0.24f,
                 center = cellCenter(startColumn, startRow),
             )
             drawCircle(
                 color = Color(0xFFFFC857).copy(alpha = 0.88f),
-                radius = cellSize * 0.25f,
+                radius = markerRadius * 0.25f,
                 center = cellCenter(endColumn, endRow),
-                style = Stroke(width = 2.dp.toPx()),
+                style = Stroke(width = 2.dp.toPx() * boardScale),
             )
 
             puzzle.openings.forEachIndexed { cellIndex, openMask ->
@@ -6457,7 +6899,7 @@ private fun MazeFidgetToy(
                 val right = left + cellSize
                 val bottom = top + cellSize
                 val wallColor = Color(0xFF56F1C8).copy(alpha = 0.76f)
-                val wallWidth = 1.4.dp.toPx()
+                val wallWidth = 1.4.dp.toPx() * boardScale
 
                 if (openMask and MAZE_OPEN_UP == 0) {
                     drawLine(wallColor, Offset(left, top), Offset(right, top), wallWidth)
@@ -6475,22 +6917,45 @@ private fun MazeFidgetToy(
 
             drawCircle(
                 color = Color(0xFFEF476F),
-                radius = cellSize * 0.28f,
+                radius = markerRadius * 0.28f,
                 center = cellCenter(playerColumn, playerRow),
             )
             drawCircle(
                 color = Color.White.copy(alpha = 0.48f),
-                radius = cellSize * 0.1f,
+                radius = markerRadius * 0.1f,
                 center = cellCenter(playerColumn, playerRow),
             )
         }
 
-        FidgetCornerResetButton(
-            accentColor = Color(0xFFFFC857),
-            accentColorArgb = 0xFFFFC857.toInt(),
-            onClick = onRefresh,
-        )
+            FidgetMazeResetButton(boardSide = boardSide, onClick = onRefresh)
+            }
+        }
     }
+}
+
+@Composable
+private fun BoxScope.FidgetMazeResetButton(
+    boardSide: Dp,
+    onClick: () -> Unit,
+) {
+    val buttonWidth = 22.dp
+    val buttonHeight = 20.dp
+    val buttonOffset = boardSide - buttonWidth - 4.dp
+    val buttonTop = 4.dp
+
+    FidgetThemeButton(
+        text = "R",
+        modifier = Modifier
+            .align(Alignment.TopStart)
+            .offset(x = buttonOffset, y = buttonTop)
+            .size(width = buttonWidth, height = buttonHeight),
+        fontSize = 8.sp,
+        selected = true,
+        prominent = true,
+        accentColor = Color(0xFFFFC857),
+        accentColorArgb = 0xFFFFC857.toInt(),
+        onClick = onClick,
+    )
 }
 
 internal data class CenterDropMaze(
@@ -6569,22 +7034,28 @@ private fun CenterDropMazeFidgetToy(
     val density = LocalDensity.current
     Box(
         modifier = Modifier
-            .size(118.dp)
-            .background(Color.White.copy(alpha = 0.06f), CircleShape)
-            .border(1.dp, Color(0xFFFFC857).copy(alpha = 0.72f), CircleShape)
-            .pointerInput(maze) {
-                detectDragGestures(
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        onMove(with(density) { Offset(dragAmount.x.toDp().value, dragAmount.y.toDp().value) })
-                    },
-                    onDragEnd = onRelease,
-                    onDragCancel = onRelease,
-                )
-            },
-        contentAlignment = Alignment.Center,
+            .width(118.dp)
+            .height(148.dp),
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .size(118.dp)
+                .align(Alignment.Center)
+                .background(Color.White.copy(alpha = 0.06f), CircleShape)
+                .border(1.dp, Color(0xFFFFC857).copy(alpha = 0.72f), CircleShape)
+                .pointerInput(maze) {
+                    detectDragGestures(
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            onMove(with(density) { Offset(dragAmount.x.toDp().value, dragAmount.y.toDp().value) })
+                        },
+                        onDragEnd = onRelease,
+                        onDragCancel = onRelease,
+                    )
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
             val center = Offset(size.width / 2f, size.height / 2f)
             CENTER_DROP_RING_RADII_DP.forEachIndexed { index, radiusDp ->
                 val radius = radiusDp.dp.toPx()
@@ -6635,7 +7106,16 @@ private fun CenterDropMazeFidgetToy(
                 alpha = if (solved) 0.46f else 1f,
             )
         }
-        FidgetCornerResetButton(
+        }
+        FidgetThemeButton(
+            text = "R",
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 2.dp, end = 1.dp)
+                .size(width = 22.dp, height = 20.dp),
+            fontSize = 7.sp,
+            selected = true,
+            prominent = true,
             accentColor = Color(0xFFFFC857),
             accentColorArgb = 0xFFFFC857.toInt(),
             onClick = onRefresh,
@@ -6836,10 +7316,10 @@ private fun BoxScope.FidgetCornerResetButton(
         text = "R",
         modifier = Modifier
             .align(Alignment.TopEnd)
-            .padding(top = 8.dp, end = 8.dp)
+            .padding(top = 4.dp, end = 4.dp)
             .zIndex(3f)
-            .size(width = 28.dp, height = 26.dp),
-        fontSize = 9.sp,
+            .size(width = 22.dp, height = 20.dp),
+        fontSize = 8.sp,
         selected = true,
         prominent = true,
         accentColor = accentColor,
@@ -7647,6 +8127,7 @@ private fun FidgetRewardChip(
     text: String,
     ringColor: Color,
     rainbow: Boolean,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
     phoneLayout: Boolean = false,
     phoneLandscape: Boolean = false,
@@ -7695,7 +8176,8 @@ private fun FidgetRewardChip(
                     )
                 },
             )
-            .padding(horizontal = if (phonePortrait) 16.dp else 10.dp),
+            .padding(horizontal = if (phonePortrait) 16.dp else 10.dp)
+            .clickable(onClick = onClick),
     ) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(
@@ -7842,6 +8324,28 @@ private class FidgetFeedbackController(context: Context) {
             )
             BeatSoundMode.Wood -> playSample(woodSoundId, accentIntensityMode)
             BeatSoundMode.Bell -> playSample(bellSoundId, accentIntensityMode)
+        }
+    }
+
+    fun playReward(
+        hapticEnabled: Boolean,
+        soundEnabled: Boolean,
+        beatSoundMode: BeatSoundMode,
+    ) {
+        if (hapticEnabled) {
+            vibrator?.vibrate(
+                VibrationEffect.createWaveform(
+                    longArrayOf(0L, 38L, 32L, 72L),
+                    intArrayOf(0, 190, 0, VibrationEffect.DEFAULT_AMPLITUDE),
+                    -1,
+                ),
+            )
+        }
+        if (!soundEnabled) return
+        when (beatSoundMode) {
+            BeatSoundMode.Clicks -> clickTone.startTone(ToneGenerator.TONE_PROP_ACK, 96)
+            BeatSoundMode.Wood -> playSample(woodSoundId, AccentIntensityMode.Big)
+            BeatSoundMode.Bell -> playSample(bellSoundId, AccentIntensityMode.Big)
         }
     }
 

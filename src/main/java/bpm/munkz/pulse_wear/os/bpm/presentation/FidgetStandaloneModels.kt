@@ -38,6 +38,24 @@ enum class AccentIntensityMode(val persistedValue: Int) {
     }
 }
 
+enum class FidgetRewardStyle(val persistedValue: Int) {
+    Calm(0),
+    Glow(1),
+    Celebrate(2),
+    ;
+
+    companion object {
+        fun fromPersistedValue(value: Int): FidgetRewardStyle =
+            entries.firstOrNull { it.persistedValue == value } ?: Glow
+    }
+}
+
+internal fun FidgetRewardStyle.labelFor(language: AppLanguage): String = when (this) {
+    FidgetRewardStyle.Calm -> if (language == AppLanguage.English) "Calm" else "Calma"
+    FidgetRewardStyle.Glow -> if (language == AppLanguage.English) "Glow" else "Brillo"
+    FidgetRewardStyle.Celebrate -> if (language == AppLanguage.English) "Celebrate" else "Celebrar"
+}
+
 internal const val NEON_GREEN_COLOR = -6422784
 internal const val RAINBOW_COLOR = 0x00ABCDEF
 

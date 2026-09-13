@@ -7,12 +7,23 @@ import org.junit.Test
 
 class FidgetLocalizationTest {
     @Test
-    fun rewardCountsCompactBeforeTheyOverflowWatchChips() {
+    fun rewardCountsStayReadableThroughThousandsThenAbbreviateMillions() {
         assertEquals("999", formatFidgetCount(999))
-        assertEquals("1K", formatFidgetCount(1_000))
-        assertEquals("12.3K", formatFidgetCount(12_345))
+        assertEquals("1,000", formatFidgetCount(1_000))
+        assertEquals("12,345", formatFidgetCount(12_345))
+        assertEquals("999,999", formatFidgetCount(999_999))
         assertEquals("1M", formatFidgetCount(1_000_000))
         assertEquals("1.3M", formatFidgetCount(1_346_269))
+    }
+
+    @Test
+    fun rewardChipLabelsReduceDetailAtTheRequestedMilestones() {
+        val english = fidgetTextFor(AppLanguage.English)
+
+        assertEquals("999 taps | 1,000 reward", english.rewardLine(999, 1_000))
+        assertEquals("1,000 | 1,597", english.rewardLine(1_000, 1_597))
+        assertEquals("10,000 taps", english.rewardLine(10_000, 10_946))
+        assertEquals("1M taps", english.rewardLine(1_000_000, 1_346_269))
     }
 
     @Test
