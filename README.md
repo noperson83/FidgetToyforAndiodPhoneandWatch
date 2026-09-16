@@ -83,6 +83,15 @@ Spin it. Tap it. Tilt it. Make it yours.
 - The review dialog links to the app's Fidget-specific privacy policy at
   `https://www.labmunkz.com/MunkzFidgetToy/privacy`.
 
+## Release history
+
+### 1.6.5 - Production submission (2026-09-16)
+
+- Phone version code 21 and Wear OS version code 22 were submitted to Google
+  Play Production review.
+- This release covers the expanded toy collection and optional Motion controls.
+- Status: In review. Google Play approval and device delivery are pending.
+
 ## Variants
 
 - `fidgetphone`: Android phone app, minimum API 31
