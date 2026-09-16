@@ -81,4 +81,16 @@ class FidgetLocalizationTest {
             fidgetToyNameFor(FIDGET_WALL_INDEX, AppLanguage.Spanish, spanish),
         )
     }
+
+    @Test
+    fun menuSaveReturnsToTheLastPlayableToy() {
+        assertEquals(
+            FIDGET_BEAT_MACHINE_INDEX,
+            fidgetMenuReturnToyIndex(FIDGET_BEAT_MACHINE_INDEX),
+        )
+        assertEquals(
+            FIDGET_SPINNER_INDEX,
+            fidgetMenuReturnToyIndex(-1),
+        )
+    }
 }

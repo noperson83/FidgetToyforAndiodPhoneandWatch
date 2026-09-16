@@ -139,6 +139,9 @@ internal fun FidgetToyPage(
     var toyIndex by rememberSaveable {
         mutableIntStateOf(directLaunchToyIndex ?: FIDGET_SPINNER_INDEX)
     }
+    var lastPlayableToyIndex by rememberSaveable {
+        mutableIntStateOf(directLaunchToyIndex ?: FIDGET_SPINNER_INDEX)
+    }
     var directLaunchGuardUntilMs by remember { mutableLongStateOf(0L) }
     var rotationDegrees by remember { mutableFloatStateOf(0f) }
     var spinVelocityDegreesPerSecond by remember { mutableFloatStateOf(0f) }
@@ -267,6 +270,11 @@ internal fun FidgetToyPage(
     LaunchedEffect(toyIndex, wearEdition) {
         if (wearEdition && toyIndex != FIDGET_MENU_INDEX) {
             donationPopupOpen = false
+        }
+    }
+    LaunchedEffect(toyIndex) {
+        if (FIDGET_TOY_INFOS.any { toy -> toy.id == toyIndex }) {
+            lastPlayableToyIndex = toyIndex
         }
     }
     val pinnedToyIds = remember(pinnedToyIdsCsv) { pinnedToyIdsCsv.toPinnedToyIds() }
@@ -592,7 +600,7 @@ internal fun FidgetToyPage(
             ),
         )
         triggerFeedback(countFidget = false)
-        toyIndex = FIDGET_SPINNER_INDEX
+        toyIndex = fidgetMenuReturnToyIndex(lastPlayableToyIndex)
     }
 
     fun togglePinnedToy(toyId: Int) {
@@ -1347,6 +1355,7 @@ internal fun FidgetToyPage(
                         } else if (toyIndex == FIDGET_KEY_CLICKS_INDEX) {
                             KeyClicksFidgetToy(
                                 keyMask = keyClickMask,
+                                wearEdition = wearEdition,
                                 onKeyPress = { index ->
                                     triggerFeedback()
                                     keyClickMask = keyClickMask xor (1 shl index)
@@ -4460,6 +4469,12 @@ private fun fidgetPageOrderFor(pinnedToyIds: List<Int>): List<Int> {
     return pinnedToyIds + unpinnedToyIds
 }
 
+internal fun fidgetMenuReturnToyIndex(lastPlayableToyIndex: Int): Int {
+    return FIDGET_TOY_INFOS.firstOrNull { toy -> toy.id == lastPlayableToyIndex }
+        ?.id
+        ?: FIDGET_SPINNER_INDEX
+}
+
 internal fun fidgetToyNameFor(
     toyIndex: Int,
     language: AppLanguage,
@@ -6419,23 +6434,27 @@ private fun WorryStoneFidgetToy(
 @Composable
 private fun KeyClicksFidgetToy(
     keyMask: Int,
+    wearEdition: Boolean,
     onKeyPress: (Int) -> Unit,
 ) {
+    val visibleRowCount = if (wearEdition) 2 else 3
+    val keyWidth = if (wearEdition) 34.dp else 31.dp
+    val keyHeight = if (wearEdition) 28.dp else 25.dp
     Column(
         verticalArrangement = Arrangement.spacedBy(6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .width(118.dp)
-            .height(104.dp),
+            .height(if (wearEdition) 62.dp else 104.dp),
     ) {
-        repeat(3) { row ->
+        repeat(visibleRowCount) { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 repeat(3) { column ->
                     val index = row * 3 + column
                     val down = keyMask and (1 shl index) != 0
                     Box(
                         modifier = Modifier
-                            .size(width = 31.dp, height = 25.dp)
+                            .size(width = keyWidth, height = keyHeight)
                             .clip(RoundedCornerShape(6.dp))
                             .background(if (down) Color(0xFF56F1C8) else Color(0xFF20272B))
                             .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
@@ -7667,10 +7686,10 @@ private fun FanFidgetToy(
         FidgetThemeButton(
             text = if (on) "Breeze" else "Start",
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 5.dp)
-                .width(48.dp)
-                .height(22.dp),
+                .align(Alignment.BottomEnd)
+                .padding(end = 7.dp, bottom = 6.dp)
+                .width(40.dp)
+                .height(20.dp),
             fontSize = 7.sp,
             selected = on,
             prominent = true,
